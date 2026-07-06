@@ -1,0 +1,1503 @@
+@import "@fontsource/comfortaa/400.css";
+@import "@fontsource/comfortaa/600.css";
+@import "@fontsource/comfortaa/700.css";
+@import "tailwindcss";
+
+/* ============================================
+   NeedyPet - Custom Theme (Pastel Pink/Lilac)
+   Ported from the original client app.css; token names are kept
+   so the visual language carries over 1:1.
+   ============================================ */
+
+@theme {
+  /* Brand colors mapped to Tailwind tokens */
+  --color-primary: #fbcde6;
+  --color-primary-foreground: rgb(178, 77, 137);
+  --color-foreground: #705e76;
+  --color-card-border: rgb(178, 110, 150);
+  --color-destructive: #ff3b30;
+  --color-success: #008c81;
+  --color-muted: #ded7e0;
+  /* Neutral gray darkened to meet WCAG 4.5:1 on the inactive card background */
+  --color-muted-foreground: #5d5d5d;
+
+  /* App-specific colors */
+  --color-status-done: #bce3ff;
+  --color-surface-app: #eedbfa;
+  /* LOCKED: the logo image has this pink baked in; changing it would show
+     the logo's square edges on auth cards. */
+  --color-surface-inner: #ffeef5;
+  --color-surface-field: #fbeaf6;
+  --color-surface-control: #ffe0f1;
+  --color-home-pets-surface: rgba(238, 219, 250, 0.62);
+  --color-need-inactive: var(--color-muted);
+  --color-need-inactive-body: #f3f0f4;
+  --color-form-field-bg: var(--color-well);
+  --color-form-field-border: var(--color-border-hover);
+  --color-form-button-secondary: var(--color-surface-control);
+  --color-form-button-secondary-hover: #f8d2ea;
+  --color-surface-control-soft: rgba(255, 224, 241, 0.52);
+  --color-surface-control-hover: rgba(178, 77, 137, 0.1);
+  --color-surface-thumb: #ffffff;
+  --color-border-soft: rgba(178, 77, 137, 0.22);
+  --color-border-field: rgba(178, 77, 137, 0.3);
+  --color-border-subtle: rgba(178, 77, 137, 0.16);
+  --color-border-divider: rgba(178, 77, 137, 0.14);
+  --color-border-hover: rgba(178, 77, 137, 0.34);
+  --color-border-muted: rgba(112, 94, 118, 0.2);
+  --color-border-inactive: #d0d0d0;
+  --color-danger-soft: rgba(255, 59, 48, 0.08);
+  --color-danger-hover: rgba(255, 59, 48, 0.12);
+  --color-danger-border: rgba(255, 59, 48, 0.4);
+
+  /* Pastel duo card scheme: cream body + pink->lilac band on the lilac page */
+  --color-card-bg: #fff9fc;
+  --color-card-edge: rgba(204, 179, 216, 0.65);
+  --color-well: #f6ecfb;
+  --color-well-soft: rgba(238, 219, 250, 0.55);
+  /* rgb(178,77,137) is only ~3.5:1 on the band's pink; this darker tone is
+     ~5.6:1 there, so small band text stays WCAG AA readable. */
+  --color-primary-foreground-strong: rgb(140, 45, 100);
+  --gradient-card-band: linear-gradient(135deg, #fbcde6 0%, #f3d9f3 55%, #eedbfa 100%);
+  /* Nav chrome: same family as the card band, slightly pinker */
+  --gradient-nav: linear-gradient(90deg, #fbcde6 0%, #f8d7ee 55%, #f3d9f3 100%);
+  --shadow-nav: 0 2px 12px rgba(178, 110, 150, 0.2);
+  --shadow-nav-up: 0 -2px 12px rgba(178, 110, 150, 0.18);
+  /* Frosted-glass surface (home pets backdrop) */
+  --color-glass-rim: rgba(255, 255, 255, 0.55);
+  --shadow-glass: 0 8px 24px rgba(178, 110, 150, 0.14);
+  /* Cream pill highlight (nav active/hover states) */
+  --color-pill-cream: rgba(255, 249, 252, 0.72);
+  --color-pill-cream-soft: rgba(255, 249, 252, 0.5);
+  --color-pill-cream-strong: rgba(255, 249, 252, 0.82);
+  /* Decorative paw silhouette, used via mask-image so it tints with background */
+  --mask-paw: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='4' r='2'/%3E%3Ccircle cx='18' cy='8' r='2'/%3E%3Ccircle cx='20' cy='16' r='2'/%3E%3Cpath d='M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z'/%3E%3C/svg%3E");
+
+  /* Notification accent colors */
+  --color-status-success: #4caf50;
+  --color-status-error: #f44336;
+  --color-status-info: #2196f3;
+
+  /* Auth page colors */
+  /* Soft lilac for input/select backgrounds (shared by form + auth fields). */
+  --color-auth-input-bg: #ece0fb;
+  --color-auth-button: var(--color-primary);
+  --color-auth-button-secondary: var(--color-surface-control);
+
+  /* Button colors (button-primary remains as an accent for chip borders etc.) */
+  --color-button-primary: #f3c3e3;
+  /* Primary buttons share a soft pink->lilac sheen tied to the band gradient */
+  --gradient-button-primary: linear-gradient(135deg, #fbcde6 0%, #f5d7f1 100%);
+  --gradient-button-primary-hover: linear-gradient(135deg, #f8c0de 0%, #eecbec 100%);
+
+  /* Reusable shadow recipes */
+  --shadow-panel: 0 6px 16px rgba(178, 110, 150, 0.24);
+  --shadow-panel-hover: 0 9px 22px rgba(178, 110, 150, 0.28);
+  --shadow-control: 0 3px 8px rgba(178, 110, 150, 0.24);
+  --shadow-control-hover: 0 5px 14px rgba(178, 110, 150, 0.26);
+  --shadow-inset-surface: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  --shadow-sm: 0 1px 3px rgba(178, 110, 150, 0.22);
+  --shadow-field: inset 0 1px 0 rgba(255, 255, 255, 0.48), 0 1px 4px rgba(178, 110, 150, 0.18);
+  /* Softer inset for form inputs: subtle depth without the bright top rim that
+     made near-white fields float against the lilac card. */
+  --shadow-field-input: inset 0 1px 2px rgba(178, 110, 150, 0.12);
+  --shadow-focus-ring: 0 0 0 3px rgba(178, 110, 150, 0.15);
+
+  /* Motion recipes: interactive = buttons/links/cards, field = input shells */
+  --transition-interactive:
+    background 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s, opacity 0.15s,
+    transform 0.1s;
+  --transition-field: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+
+  /* Layer scale (base layers stay literal: body::before 0, #__nuxt 1) */
+  --z-index-header: 40;
+  --z-index-mobile-nav: 50;
+  --z-index-overlay: 50;
+  --z-index-popover: 100;
+  --z-index-toast: 200;
+  --z-index-skip-link: 210;
+
+  /* Shared control sizes */
+  --tap-target-size: 44px;
+  --field-min-height: 52px;
+
+  /* Font family */
+  --font-sans: "Comfortaa", "Arial", sans-serif;
+
+  /* Layout */
+  --content-max-width: 800px;
+  --auth-card-max-width: 500px;
+  --account-panel-max-width: 600px;
+  --account-panel-min-height: clamp(25rem, 48svh, 27rem);
+  --panel-max-width: 700px;
+  --space-page: clamp(1rem, 4vw, 1.5rem);
+  --space-card: clamp(1rem, 3vw, 1.5rem);
+  --space-stack: clamp(0.75rem, 2vw, 1rem);
+  --pet-panel-top: clamp(0.5rem, 3vh, 1.25rem);
+  --account-panel-top: clamp(0.75rem, 3vh, 1.5rem);
+  --auth-panel-top: clamp(1rem, 5vh, 3rem);
+  --header-height: 60px;
+  --mobile-nav-height: 64px;
+  --mobile-nav-reserve: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom, 0px));
+
+  /* Border radius */
+  --radius-sm: 8px;
+  --radius-field: 16px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 25px;
+  --radius-2xl: 40px;
+  --radius-3xl: 50px;
+  --radius-pill: 999px;
+}
+
+/* ============================================
+   Global base styles
+   ============================================ */
+
+* {
+  text-transform: none;
+}
+
+html {
+  min-height: 100%;
+  text-size-adjust: 100%;
+}
+
+html,
+body {
+  background-color: var(--color-surface-app);
+}
+
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+body {
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  color: var(--color-foreground);
+  position: relative;
+  isolation: isolate;
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url("../images/needypet_background_desktop.webp");
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+#__nuxt {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+/* Tablet background */
+@media (max-width: 1200px) {
+  body::before {
+    background-image: url("../images/needypet_background_tablet.webp");
+  }
+}
+
+/* Mobile background */
+@media (max-width: 768px) {
+  body::before {
+    background-image: url("../images/needypet_background_mobile.webp");
+  }
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+a {
+  color: var(--color-primary-foreground);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+a,
+li,
+button {
+  overflow-wrap: break-word;
+}
+
+/* Strong icon style for header icons */
+.icon-strong,
+.icon-strong svg,
+.icon-strong .lucide {
+  color: var(--color-primary-foreground);
+  stroke-width: 2.2;
+}
+
+/* Lucide PawPrint default color globally */
+.paw-header-container svg,
+.paw-header-container .lucide,
+.paw-header-container .lucide-paw-print {
+  color: var(--color-primary-foreground);
+  fill: var(--color-primary-foreground);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+h2 {
+  font-size: 1.4rem;
+}
+
+h3 {
+  font-size: 1.3rem;
+}
+
+h4 {
+  font-size: 1.15rem;
+}
+
+/* Page title tiers (h1 sizes per page family; mobile sizes in the 568px block) */
+.page-title-sm {
+  font-size: 1.15rem;
+}
+
+.page-title {
+  font-size: 1.3rem;
+}
+
+.page-title-lg {
+  font-size: 1.4rem;
+}
+
+strong {
+  color: var(--color-primary-foreground);
+}
+
+p {
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+a {
+  text-decoration: none;
+}
+
+ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+li {
+  margin-bottom: 5px;
+}
+
+/* ============================================
+   Skip to content link (keyboard accessibility)
+   ============================================ */
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: var(--z-index-skip-link);
+  padding: 10px 16px;
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-control);
+}
+
+.skip-link:focus {
+  left: 8px;
+  top: 8px;
+}
+
+/* Programmatic focus target (skip link) should not show an outline */
+[role="main"]:focus {
+  outline: none;
+}
+
+/* ============================================
+   Layout wrappers
+   ============================================ */
+
+.page-root {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 auto;
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: clamp(1rem, 3vh, 1.75rem) auto 0;
+  padding: var(--space-page);
+  box-sizing: border-box;
+}
+
+.app-page-root {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--header-height));
+  min-height: calc(100svh - var(--header-height));
+}
+
+/* ============================================
+   Pastel duo card primitives (band + body)
+   ============================================ */
+
+/* Shared shell for duo cards; .form-container composes it below. */
+.card-shell,
+.form-container {
+  padding: 0;
+  border: 1px solid var(--color-card-edge);
+  border-radius: var(--radius-2xl);
+  background: var(--color-card-bg);
+  box-shadow: var(--shadow-panel);
+  /* Clips the band gradient to the rounded corners */
+  overflow: hidden;
+}
+
+.card-band {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-stack);
+  min-width: 0;
+  padding: clamp(0.85rem, 2.5vw, 1.1rem) var(--space-card);
+  background: var(--gradient-card-band);
+  border-bottom: 1px solid var(--color-border-divider);
+  overflow: hidden;
+}
+
+/* Decorative paw watermark peeking from the band's corner (paint-only) */
+.card-band::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -0.4rem;
+  bottom: -0.8rem;
+  width: 3.4rem;
+  height: 3.4rem;
+  background: var(--color-primary-foreground);
+  opacity: 0.13;
+  transform: rotate(-14deg);
+  pointer-events: none;
+  mask-image: var(--mask-paw);
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+/* Band titles sit on the pink gradient; use the darker tone so smaller
+   mobile title sizes keep enough contrast. */
+.card-band :is(h1, h2, h3, h4, h5, h6) {
+  margin: 0;
+  min-width: 0;
+  color: var(--color-primary-foreground-strong);
+}
+
+.card-body {
+  padding: var(--space-card);
+}
+
+/* Pet image "sticker": pastel gradient backdrop + white ring. Width and
+   radius stay per-component. */
+.sticker-tile {
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: var(--gradient-card-band);
+  border: 3px solid var(--color-surface-thumb);
+  box-shadow: var(--shadow-control);
+}
+
+/* Small centered gradient underline for headings (home sections, auth titles) */
+.title-underline {
+  position: relative;
+  padding-bottom: 14px;
+}
+
+.title-underline::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 44px;
+  height: 4px;
+  transform: translateX(-50%);
+  border-radius: var(--radius-pill);
+  background: var(--gradient-card-band);
+}
+
+/* ============================================
+   Auth pages (Login, Register, Landing, etc.)
+   ============================================ */
+
+.login-register-container {
+  position: relative;
+  width: 100%;
+  max-width: min(94vw, var(--auth-card-max-width));
+  box-sizing: border-box;
+  margin: var(--auth-panel-top) auto 0;
+  padding: var(--space-card);
+  border-radius: var(--radius-3xl);
+  /* Stays on the original pink: the logo image has this same color baked in,
+     so a cream card body would show the logo's square edges. */
+  background-color: var(--color-surface-inner);
+  border: 1px solid var(--color-auth-button);
+  box-shadow: var(--shadow-panel);
+  overflow-wrap: break-word;
+}
+
+/* Decorative corner paw kept fully inside the card. */
+.login-register-container::after,
+.confirmation-message::after {
+  content: "";
+  position: absolute;
+  right: 1rem;
+  bottom: 0.9rem;
+  width: 4.5rem;
+  height: 4.5rem;
+  background: var(--color-primary-foreground);
+  opacity: 0.08;
+  transform: rotate(-14deg);
+  pointer-events: none;
+  mask-image: var(--mask-paw);
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+.auth-panel {
+  width: min(100%, var(--auth-card-max-width));
+  max-width: min(94vw, var(--auth-card-max-width));
+  margin-top: var(--auth-panel-top);
+  box-sizing: border-box;
+}
+
+.landing-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.65rem, 1.8vw, 0.95rem);
+  text-align: center;
+}
+
+.landing-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  margin-top: 0.1rem;
+}
+
+.landing-card .landing-action-button {
+  width: min(100%, 16rem);
+  margin-top: 0;
+  margin-right: auto;
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  line-height: 1.2;
+}
+
+.landing-intro {
+  margin: 0 auto;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--color-foreground);
+  opacity: 0.8;
+}
+
+.landing-action-hint {
+  font-size: 0.7rem;
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+.auth-card {
+  --auth-button-width: 11.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.75rem, 2vw, 1rem);
+  max-width: min(94vw, var(--auth-card-max-width));
+  padding: var(--space-card);
+}
+
+.auth-form-card {
+  align-items: stretch;
+  max-width: min(94vw, var(--auth-card-max-width));
+  text-align: left;
+}
+
+.login-register-container .logo {
+  width: min(72%, 190px);
+  max-width: 190px;
+  min-height: min(72vw, 190px);
+  margin-bottom: 0.1rem;
+}
+
+.auth-card-header {
+  gap: 0.5rem;
+  margin: 0 auto 0.25rem;
+}
+
+.landing-card .paw-header-container {
+  margin: 0 auto;
+}
+
+.auth-card-header h1 {
+  margin: 0;
+}
+
+.auth-subtitle {
+  margin: 0 auto 0.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--color-foreground);
+  opacity: 0.8;
+}
+
+.auth-card-header svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-top: 0.15rem;
+}
+
+.auth-form .auth-field {
+  margin-bottom: 0.7rem;
+}
+
+.auth-card .custom-error-message {
+  margin: 0.2rem 0 0.65rem;
+}
+
+.auth-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  width: 100%;
+  margin-top: 0.4rem;
+}
+
+.auth-action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  width: 100%;
+  margin-top: 0.45rem;
+}
+
+.auth-action-row .action-button {
+  width: auto;
+  min-width: var(--auth-button-width);
+  max-width: 16rem;
+  margin-top: 0;
+  padding-right: 1.35rem;
+  padding-left: 1.35rem;
+}
+
+.auth-secondary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  min-height: var(--tap-target-size);
+  margin: 0.35rem auto 0;
+  padding: 0.5rem 0.85rem;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--color-primary-foreground);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  line-height: 1.25;
+  transition: var(--transition-interactive);
+}
+
+@media (hover: hover) {
+  .auth-secondary-link:hover {
+    background: var(--color-surface-control-hover);
+  }
+}
+
+.auth-secondary-link:active {
+  transform: scale(0.97);
+}
+
+/* Auth input fields (wrapper div around inputs on auth pages) */
+.auth-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 50px;
+  padding: 0;
+  background: var(--color-auth-input-bg);
+  border: 2px solid var(--color-border-soft);
+  border-radius: var(--radius-pill);
+  margin-bottom: 12px;
+  box-sizing: border-box;
+  box-shadow: var(--shadow-field);
+  transition: var(--transition-field);
+}
+
+.auth-field:focus-within {
+  border-color: var(--color-card-border);
+  box-shadow: var(--shadow-focus-ring);
+}
+
+/* The actual input inside auth-field */
+.auth-field-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+  /* Extra horizontal padding so text clears the pill curve */
+  padding: 13px 22px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 0.86rem;
+  line-height: 1.4;
+  color: var(--color-foreground);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.auth-field:has(.show-password-button) .auth-field-input {
+  padding-right: 3.25rem;
+}
+
+.auth-field-input::placeholder {
+  color: var(--color-foreground);
+  font-style: italic;
+  opacity: 0.7;
+}
+
+/* Keep autofilled auth inputs on the pink theme instead of the browser's blue. */
+.auth-field-input:-webkit-autofill,
+.auth-field-input:-webkit-autofill:hover,
+.auth-field-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-foreground);
+  -webkit-box-shadow: 0 0 0 1000px var(--color-auth-input-bg) inset;
+  caret-color: var(--color-foreground);
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* Timezone value is a span, not an input - keep long zone names on one line. */
+.auth-field-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-field-hint {
+  margin: -0.15rem 0 0.1rem;
+  padding-left: 4px;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--color-foreground);
+  opacity: 0.72;
+}
+
+/* Password toggle button (shared across auth & form pages) */
+.show-password-button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--color-surface-control-soft);
+  border: 1px solid var(--color-border-subtle);
+  cursor: pointer;
+  color: var(--color-primary-foreground);
+  width: var(--tap-target-size);
+  height: var(--tap-target-size);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-interactive);
+}
+
+@media (hover: hover) {
+  .show-password-button:hover {
+    background: var(--color-surface-control);
+    border-color: var(--color-border-hover);
+    box-shadow: var(--shadow-control-hover);
+    transform: translateY(-50%) scale(1.04);
+  }
+}
+
+.show-password-button:active {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-50%) scale(0.96);
+}
+
+/* Auth buttons */
+.action-button {
+  display: block;
+  width: 100%;
+  padding: 13px 16px;
+  margin-top: 0;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  line-height: 1.25;
+  color: var(--color-primary-foreground);
+  cursor: pointer;
+  min-height: 48px;
+  box-shadow: var(--shadow-control);
+  text-align: center;
+  transition: var(--transition-interactive);
+}
+
+@media (hover: hover) {
+  .action-button:hover {
+    border-color: var(--color-border-hover);
+    box-shadow: var(--shadow-control-hover);
+    transform: translateY(-1px);
+  }
+}
+
+.action-button:active {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(1px) scale(0.98);
+}
+
+.primary-action-button {
+  background: var(--gradient-button-primary);
+}
+
+@media (hover: hover) {
+  .primary-action-button:hover {
+    background: var(--gradient-button-primary-hover);
+  }
+}
+
+.secondary-action-button {
+  background: var(--color-surface-control);
+}
+
+.action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Paw header container */
+.paw-header-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  margin: 0 auto;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ============================================
+   Form container (pet/profile forms - card-like wrapper)
+   ============================================ */
+
+.form-container {
+  width: 100%;
+  max-width: var(--panel-max-width);
+  box-sizing: border-box;
+  margin: 2vh auto;
+}
+
+.pet-panel {
+  width: 100%;
+  max-width: var(--content-max-width);
+  margin: var(--pet-panel-top) auto 0;
+  box-sizing: border-box;
+}
+
+.account-panel {
+  width: min(100%, var(--account-panel-max-width));
+  max-width: var(--account-panel-max-width);
+  min-height: var(--account-panel-min-height);
+  margin: var(--account-panel-top) auto 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.account-panel form {
+  width: 100%;
+}
+
+/* Let the body fill the account panel's min-height below the band */
+.account-panel > .card-body {
+  flex: 1 0 auto;
+}
+
+/* Keep form columns pleasantly narrow inside wide cards (auth-card proportions). */
+.form-container form {
+  width: 100%;
+  max-width: min(100%, 30rem);
+  margin-inline: auto;
+}
+
+.form-header {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: var(--space-stack);
+}
+
+/* ============================================
+   Form fields (used in pet/profile forms)
+   ============================================ */
+
+/* form-field: wrapper div around inputs in forms */
+.form-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--field-min-height);
+  padding: 0;
+  background: var(--color-form-field-bg);
+  border: 1.5px solid var(--color-form-field-border);
+  border-radius: var(--radius-field);
+  margin-bottom: 0.7rem;
+  box-sizing: border-box;
+  box-shadow: var(--shadow-field-input);
+  transition: var(--transition-field);
+}
+
+/* Hover affordance; focus rules below win while a field is focused. */
+@media (hover: hover) {
+  .form-field:hover,
+  .form-field-input:hover {
+    border-color: var(--color-border-hover);
+  }
+}
+
+.form-field:focus-within,
+.form-field:focus-visible {
+  border-color: var(--color-primary-foreground);
+  background: var(--color-surface-inner);
+  box-shadow: var(--shadow-focus-ring);
+  outline: none;
+}
+
+.form-field:has(textarea.form-field-input) {
+  align-items: stretch;
+}
+
+/* Standalone form inputs keep the same visual shell for modal/inline contexts. */
+.form-field-input {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--field-min-height);
+  padding: 13px 18px;
+  background: var(--color-form-field-bg);
+  border: 1.5px solid var(--color-form-field-border);
+  border-radius: var(--radius-field);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--color-foreground);
+  outline: none;
+  box-sizing: border-box;
+  box-shadow: var(--shadow-field-input);
+  transition: var(--transition-field);
+}
+
+.form-field > .form-field-input {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.form-field:has(.show-password-button) .form-field-input {
+  padding-right: 3.25rem;
+}
+
+.form-field-input::placeholder {
+  color: var(--color-foreground);
+  opacity: 0.55;
+}
+
+.form-field-input:focus {
+  border-color: var(--color-primary-foreground);
+  background: var(--color-surface-inner);
+  box-shadow: var(--shadow-focus-ring);
+}
+
+.form-field > .form-field-input:focus {
+  box-shadow: none;
+}
+
+/* Override the browser autofill highlight (defaults to blue/yellow) so filled
+   fields keep the pink form styling. The inset shadow trick repaints the
+   background because browsers ignore `background` on autofilled inputs. */
+.form-field-input:-webkit-autofill,
+.form-field-input:-webkit-autofill:hover,
+.form-field-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-foreground);
+  -webkit-box-shadow: 0 0 0 1000px var(--color-form-field-bg) inset;
+  caret-color: var(--color-foreground);
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+textarea.form-field-input {
+  resize: vertical;
+  min-height: 110px;
+  padding-top: 13px;
+  padding-bottom: 13px;
+}
+
+/* Date input specific styling */
+input[type="date"].form-field-input {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  cursor: pointer;
+}
+
+input[type="date"].form-field-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 4px;
+  border-radius: 4px;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+}
+
+input[type="date"].form-field-input::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background: var(--color-surface-control-hover);
+}
+
+/* Span used as fake input display (timezone selector) */
+span.form-field-input {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+/* Form labels */
+.form-label {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: var(--color-primary-foreground);
+  margin: 0.5rem 0 0.3rem;
+}
+
+/* Label + info-hint side by side */
+.form-label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ============================================
+   Buttons
+   ============================================ */
+
+/* Shared keyboard-focus ring for all interactive controls */
+.show-password-button:focus-visible,
+.action-button:focus-visible,
+.auth-secondary-link:focus-visible,
+.custom-button:focus-visible,
+.form-button:focus-visible,
+.settings-button:focus-visible {
+  outline: 2px solid var(--color-primary-foreground);
+  outline-offset: 2px;
+}
+
+.custom-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--gradient-button-primary);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-lg);
+  padding: 12px 20px;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  line-height: 1.25;
+  color: var(--color-primary-foreground);
+  cursor: pointer;
+  min-height: var(--tap-target-size);
+  text-align: center;
+  box-shadow: var(--shadow-control);
+  transition: var(--transition-interactive);
+}
+
+@media (hover: hover) {
+  .custom-button:hover {
+    border-color: var(--color-border-hover);
+    box-shadow: var(--shadow-control-hover);
+    background: var(--gradient-button-primary-hover);
+    transform: translateY(-1px);
+  }
+}
+
+.custom-button:active {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(1px) scale(0.98);
+}
+
+.custom-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Form button group */
+.form-button-group {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 1rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1 1 150px;
+  margin: 0;
+  width: 100%;
+  max-width: 190px;
+  min-height: 48px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  line-height: 1.25;
+  cursor: pointer;
+  box-shadow: var(--shadow-control);
+  text-align: center;
+  transition: var(--transition-interactive);
+}
+
+@media (hover: hover) {
+  .form-button:hover {
+    border-color: var(--color-border-hover);
+    box-shadow: var(--shadow-control-hover);
+    transform: translateY(-1px);
+  }
+}
+
+.form-button:active {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(1px) scale(0.98);
+}
+
+.form-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.form-button.primary {
+  background: var(--gradient-button-primary);
+  color: var(--color-primary-foreground);
+}
+
+.form-button.secondary {
+  background: var(--color-form-button-secondary);
+  color: var(--color-primary-foreground);
+  border-color: var(--color-border-soft);
+}
+
+@media (hover: hover) {
+  .form-button.primary:hover {
+    background: var(--gradient-button-primary-hover);
+  }
+
+  .form-button.secondary:hover {
+    background: var(--color-form-button-secondary-hover);
+  }
+}
+
+.form-button.danger {
+  background: var(--color-danger-soft);
+  border: 2px solid var(--color-danger-border);
+  color: var(--color-destructive);
+}
+
+@media (hover: hover) {
+  .form-button.danger:hover {
+    background: var(--color-danger-hover);
+  }
+}
+
+/* Settings button (transparent icon button) */
+.settings-button {
+  background: var(--color-surface-control-soft);
+  border: 1px solid var(--color-border-subtle);
+  padding: 8px;
+  margin: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap-target-size);
+  min-height: var(--tap-target-size);
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-interactive);
+}
+
+@media (hover: hover) {
+  .settings-button:hover {
+    background: var(--color-auth-button-secondary);
+    border-color: var(--color-border-hover);
+    box-shadow: var(--shadow-control-hover);
+    transform: translateY(-1px);
+  }
+}
+
+.settings-button:active {
+  opacity: 0.85;
+  box-shadow: var(--shadow-sm);
+  transform: translateY(1px) scale(0.96);
+}
+
+.settings-button svg {
+  width: 28px;
+  height: 28px;
+  color: var(--color-card-border);
+}
+
+/* ============================================
+   Confirmation message (email verification, etc.)
+   ============================================ */
+
+.confirmation-message {
+  position: relative;
+  padding: 20px;
+  border-radius: var(--radius-3xl);
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-edge);
+  box-shadow: var(--shadow-panel);
+  text-align: center;
+  margin-top: 5vh;
+}
+
+/* ============================================
+   Error & valid messages
+   ============================================ */
+
+.custom-error-message,
+.custom-valid-message {
+  font-size: 0.75rem;
+  text-align: center;
+  margin: 1rem;
+  white-space: pre-line;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+
+.custom-error-message {
+  color: var(--color-destructive);
+}
+
+.custom-valid-message {
+  color: var(--color-success);
+}
+
+/* ============================================
+   Password strength note
+   ============================================ */
+
+.strong-password-note {
+  font-size: 0.7rem;
+  margin: 0.5rem 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-lg);
+  background: var(--color-well);
+  box-shadow: var(--shadow-field);
+  box-sizing: border-box;
+}
+
+.strong-password-note ul {
+  list-style-type: disc;
+  margin: 0;
+  padding: 0;
+  list-style-position: inside;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.strong-password-note li {
+  width: 50%;
+  box-sizing: border-box;
+  color: var(--color-destructive);
+  margin-bottom: 2px;
+  line-height: 1.3;
+}
+
+.strong-password-note li.valid {
+  color: var(--color-success);
+}
+
+/* ============================================
+   Number input spinner removal
+   ============================================ */
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ============================================
+   Mobile responsive overrides
+   ============================================ */
+
+@media (max-width: 768px) {
+  .app-page-root {
+    min-height: calc(100vh - var(--mobile-nav-reserve));
+    min-height: calc(100svh - var(--mobile-nav-reserve));
+  }
+
+  /* Keep content clear of the fixed bottom nav */
+  .content-wrapper {
+    padding-bottom: calc(var(--space-page) + var(--mobile-nav-reserve));
+  }
+
+  .strong-password-note {
+    font-size: 0.7rem;
+    margin: 0.4rem;
+  }
+
+  .strong-password-note li {
+    width: 100%;
+    margin-bottom: 4px;
+    line-height: 1.3;
+    padding: 1px 0;
+  }
+}
+
+@media (max-width: 568px) {
+  .login-register-container {
+    max-width: 94vw;
+    margin: var(--auth-panel-top) auto 0;
+    padding: clamp(1rem, 5vw, 1.25rem);
+    border-radius: var(--radius-2xl);
+  }
+
+  .auth-card,
+  .auth-form-card {
+    max-width: 94vw;
+  }
+
+  .auth-card {
+    gap: 0.75rem;
+  }
+
+  .login-register-container .logo {
+    width: min(70vw, 190px);
+    max-width: 190px;
+    min-height: min(70vw, 190px);
+  }
+
+  .auth-card-header {
+    margin-bottom: 0.1rem;
+  }
+
+  .auth-action-row {
+    flex-direction: column;
+    gap: 0.55rem;
+    margin-top: 0.25rem;
+  }
+
+  .auth-action-row .action-button {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .auth-secondary-link {
+    margin-top: 0.15rem;
+  }
+
+  .form-container,
+  .confirmation-message,
+  .card-shell {
+    border-radius: var(--radius-xl);
+  }
+
+  .card-band {
+    padding: 0.75rem 1rem;
+  }
+
+  .account-panel {
+    min-height: min(25rem, calc(100svh - var(--mobile-nav-reserve) - 2rem));
+  }
+
+  .custom-button,
+  .action-button,
+  .form-button,
+  .custom-error-message,
+  .custom-valid-message,
+  .auth-field,
+  .confirmation-message,
+  p,
+  a,
+  li {
+    font-size: 0.75rem;
+  }
+
+  h2 {
+    font-size: 1.2rem;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+  }
+
+  h4 {
+    font-size: 0.9rem;
+  }
+
+  h5 {
+    font-size: 0.8rem;
+  }
+
+  .page-title-sm {
+    font-size: 0.9rem;
+  }
+
+  .page-title {
+    font-size: 1.1rem;
+  }
+
+  .page-title-lg {
+    font-size: 1.2rem;
+  }
+
+  .custom-button,
+  .action-button {
+    padding: 10px 14px;
+  }
+
+  .form-button {
+    max-width: none;
+  }
+
+  .strong-password-note {
+    font-size: 0.7rem;
+    margin: 0.3rem;
+  }
+
+  .strong-password-note li {
+    width: 100%;
+    margin-bottom: 3px;
+    line-height: 1.2;
+    padding: 1px 0;
+  }
+}
+
+/* Narrowest phones: shrink auth text so long placeholders and the intro
+   sentence fit without mid-word breaks or clipping against the eye button. */
+@media (max-width: 400px) {
+  .landing-intro {
+    font-size: 0.78rem;
+  }
+
+  .auth-field-input {
+    font-size: 0.8rem;
+  }
+
+  .auth-subtitle {
+    font-size: 0.8rem;
+  }
+
+  /* Degrade a too-long placeholder to an ellipsis instead of slicing a letter */
+  .auth-field-input::placeholder,
+  .form-field-input::placeholder {
+    text-overflow: ellipsis;
+  }
+}
+
+@media (max-width: 360px) {
+  /* Keep narrow bands free for the title text */
+  .card-band::after {
+    display: none;
+  }
+}
+
+/* ============================================
+   Reduced motion (respect user preference)
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

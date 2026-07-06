@@ -1,0 +1,31 @@
+import { eq } from 'drizzle-orm';
+import { useDb } from '../../db';
+import { users } from '../../db/schema';
+import { confirmEmailMessage, useMailer } from '../../utils/mailer';
+import { checkRateLimit } from '../../utils/rateLimit';
+import { requireAppUser } from '../../utils/session';
+import { createToken, expiryFromNow } from '../../utils/tokens';
+
+/** Regenerates the confirmation token (the old link dies) and resends. */
+export default defineEventHandler(async (event) => {
+  const user = await requireAppUser(event);
+  checkRateLimit(event, `resend:user:${user.id}`, { max: 3, windowMs: 60 * 60_000 });
+  if (user.emailConfirmed) {
+    badRequest('Your email is already confirmed');
+  }
+
+  const confirm = createToken();
+  await useDb()
+    .update(users)
+    .set({
+      emailConfirmToken: confirm.tokenHash,
+      emailConfirmExpiresAt: expiryFromNow(24),
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(users.id, user.id));
+
+  const confirmLink = `${getRequestURL(event).origin}/confirm-email?token=${confirm.token}`;
+  await useMailer().send(confirmEmailMessage(user.email, confirmLink));
+
+  return { message: 'Confirmation email sent! Check your inbox. 🐾' };
+});
