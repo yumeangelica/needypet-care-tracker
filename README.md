@@ -44,7 +44,10 @@ caretaker: helper / HelperPaws123!
 
 ```bash
 bun run dev            # http://localhost:3000
-bun run test           # vitest unit tests (shared domain utilities)
+bun run test           # unit tests + API integration tests
+bun run test:unit      # vitest unit tests (shared domain utilities)
+bun run test:integration # endpoint tests over real HTTP (builds the app once,
+                       # boots one Nitro server on a throwaway SQLite database)
 bun run typecheck      # vue-tsc via nuxt typecheck
 bun run db:generate    # regenerate sqlite migrations after schema changes
 bun run db:generate:pg # regenerate the paired Postgres migrations
@@ -70,6 +73,9 @@ bun run db:import      # import a legacy JSON bundle (see migration.md)
   lockstep), migrations for both dialects, seed, legacy importer
 - `shared/` — domain types, date/measurement/stats/pet-image utilities, zod
   schemas used by both client and server
+- `tests/unit/` — pure-function vitest tests for the shared utilities;
+  `tests/integration/` — endpoint tests that drive the built server over HTTP
+  (permission matrix, rollover, record recompute, auth and profile flows)
 - `documentation/` — `migration.md` (legacy import contract),
   `postgres.md` (production database path), `auth-audit.md` (auth hardening
   notes)
