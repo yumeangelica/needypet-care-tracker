@@ -27,6 +27,9 @@ Drizzle ORM · SQLite locally / Postgres (Supabase) in production · Bun.
   own local evening via a secret-guarded cron endpoint
   (`documentation/deployment.md`)
 - Legacy JSON bundle importer (`documentation/migration.md`)
+- Installable PWA: web manifest + Workbox service worker (auto-updating), maskable
+  icons, and an offline fallback page — API responses are never cached
+  (`documentation/deployment.md`)
 
 ## Setup
 
@@ -87,9 +90,12 @@ Full production setup (build, migrations, storage, digest cron) lives in
 - `tests/unit/` — pure-function vitest tests for the shared utilities;
   `tests/integration/` — endpoint tests that drive the built server over HTTP
   (permission matrix, rollover, record recompute, auth and profile flows)
+- `public/` — static assets and PWA icons (`favicon.ico`, `pwa-192x192.png`,
+  `pwa-512x512.png`, `maskable-512x512.png`, `apple-touch-icon.png`); the manifest
+  and service worker are generated at build time by `@vite-pwa/nuxt`
 - `documentation/` — `deployment.md` (production environment, storage, digest
-  cron), `postgres.md` (production database path), `migration.md` (legacy import
-  contract), `auth-audit.md` (auth hardening notes)
+  cron, PWA), `postgres.md` (production database path), `migration.md` (legacy
+  import contract), `auth-audit.md` (auth hardening notes)
 
 ## Domain rules worth knowing
 

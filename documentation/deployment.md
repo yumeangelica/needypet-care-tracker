@@ -85,3 +85,26 @@ A missing or wrong `x-digest-secret` returns 401; an empty `NUXT_DIGEST_SECRET`
 disables the endpoint entirely (always 401). A per-recipient send failure is
 counted in `failed` and retried on the next run (the user's `last_digest_date` is
 only stamped after a successful send).
+
+## Progressive Web App
+
+NeedyPet is installable. `@vite-pwa/nuxt` generates the web manifest and a
+Workbox service worker at build time (`registerType: 'autoUpdate'`, so clients
+pick up new deploys on their next navigation). Nothing extra is needed at deploy
+time beyond a normal `bun run build` — the manifest link and service worker are
+emitted into `.output/public/`. There are no PWA-specific environment variables.
+
+- **Icons** live in `public/`: `pwa-192x192.png`, `pwa-512x512.png` (both
+  `any` purpose), `maskable-512x512.png` (`maskable` purpose), `apple-touch-icon.png`
+  (180×180 for iOS) and `favicon.ico`. They are generated from
+  `public/needypet-paw-favicon.png` (512×512) and committed — there is no build
+  step or image dependency.
+- **Offline fallback:** navigations that miss the cache with no network fall back
+  to `/offline` (a static page — no API or session use).
+- **Caching:** the service worker precaches the app shell and built assets only.
+  API responses (`/api/**`) and uploaded pet photos (`/uploads/**`) are **never**
+  cached or served from the fallback, so care data, sessions and permissions are
+  always fetched fresh.
+- The service worker is disabled in dev (`pwa.devOptions.enabled: false`); test
+  installability and offline behaviour against a production build
+  (`bun run build` → `node .output/server/index.mjs`).
