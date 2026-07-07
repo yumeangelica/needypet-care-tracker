@@ -4,8 +4,16 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['nuxt-auth-utils'],
+  modules: ['nuxt-auth-utils', '@vite-pwa/nuxt'],
   css: ['~/assets/css/main.css'],
+  // Prerender the offline page to a static HTML file so the service worker can
+  // precache it and serve it as the navigation fallback when the network is down
+  // (an SSR-only route has no cached document to fall back to).
+  nitro: {
+    prerender: {
+      routes: ['/offline'],
+    },
+  },
   vite: {
     plugins: [tailwindcss()],
   },
@@ -19,9 +27,42 @@ export default defineNuxtConfig({
       ],
       link: [
         { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
-        { rel: 'apple-touch-icon', href: '/needypet-paw-favicon.png' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
       ],
       htmlAttrs: { lang: 'en' },
+    },
+  },
+  // Installable PWA: @vite-pwa/nuxt injects the web manifest link and generates a
+  // Workbox service worker at build time. The SW is disabled in dev (devOptions)
+  // so it never interferes with HMR — verify it against a production build.
+  pwa: {
+    registerType: 'autoUpdate',
+    manifest: {
+      name: 'NeedyPet',
+      short_name: 'NeedyPet',
+      description: "All your pet's needs, one place",
+      lang: 'en',
+      theme_color: '#eedbfa',
+      background_color: '#eedbfa',
+      display: 'standalone',
+      start_url: '/',
+      scope: '/',
+      icons: [
+        { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: '/maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ],
+    },
+    workbox: {
+      // Precache the app shell + built assets and fall back to the offline page
+      // for navigations that miss the cache. API responses are never cached —
+      // care data, sessions and permissions must always be fetched fresh.
+      navigateFallback: '/offline',
+      navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//],
+      globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+    },
+    devOptions: {
+      enabled: false,
     },
   },
   runtimeConfig: {
