@@ -23,6 +23,8 @@ export const users = sqliteTable('users', {
   passwordResetToken: text('password_reset_token'),
   passwordResetExpiresAt: text('password_reset_expires_at'),
   timezone: text('timezone').notNull(),
+  digestOptIn: integer('digest_opt_in', { mode: 'boolean' }).notNull().default(false),
+  lastDigestDate: text('last_digest_date'), // YYYY-MM-DD user-local, stamped on a sent digest
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });

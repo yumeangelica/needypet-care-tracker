@@ -12,6 +12,7 @@ describe('profileUpdateSchema', () => {
     userName: 'demo',
     email: 'demo@example.com',
     timezone: 'Europe/Helsinki',
+    digestOptIn: false,
     currentPassword: 'DemoPaws123!',
   };
 
@@ -25,6 +26,12 @@ describe('profileUpdateSchema', () => {
 
   it('does not apply strength rules to the current password (older accounts)', () => {
     expect(profileUpdateSchema.safeParse({ ...valid, currentPassword: 'x' }).success).toBe(true);
+  });
+
+  it('requires a boolean digestOptIn', () => {
+    const { digestOptIn: _omit, ...withoutFlag } = valid;
+    expect(profileUpdateSchema.safeParse(withoutFlag).success).toBe(false);
+    expect(profileUpdateSchema.safeParse({ ...valid, digestOptIn: 'yes' }).success).toBe(false);
   });
 
   it('rejects an invalid timezone', () => {

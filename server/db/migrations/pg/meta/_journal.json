@@ -8,6 +8,13 @@
       "when": 1783325031124,
       "tag": "0000_happy_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783381455333,
+      "tag": "0001_fat_dark_beast",
+      "breakpoints": true
     }
   ]
 }

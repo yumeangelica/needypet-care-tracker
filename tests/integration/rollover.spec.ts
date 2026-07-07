@@ -115,7 +115,7 @@ describe('lazy rollover', () => {
     // Move the owner far west: their "today" steps backwards.
     const moved = await api('/api/me', {
       method: 'PUT',
-      body: { userName: owner.userName, email: owner.email, timezone: BEHIND_TZ, currentPassword: owner.password },
+      body: { userName: owner.userName, email: owner.email, timezone: BEHIND_TZ, digestOptIn: false, currentPassword: owner.password },
       cookie: owner.cookie,
     });
     expect(moved.status).toBe(200);
@@ -137,7 +137,7 @@ describe('lazy rollover', () => {
 
     const moved = await api('/api/me', {
       method: 'PUT',
-      body: { userName: owner.userName, email: owner.email, timezone: AHEAD_TZ, currentPassword: owner.password },
+      body: { userName: owner.userName, email: owner.email, timezone: AHEAD_TZ, digestOptIn: false, currentPassword: owner.password },
       cookie: owner.cookie,
     });
     expect(moved.status).toBe(200);

@@ -3,6 +3,10 @@
 Local development stays on SQLite. Setting `NUXT_DB_URL` switches the whole
 server to Postgres — no code changes.
 
+> This doc covers the **database** only. For the full production environment
+> (session secret, pet-photo storage, mailer, digest cron), see
+> [`deployment.md`](./deployment.md).
+
 ## How the switch works
 
 - `server/db/schema.sqlite.ts` and `server/db/schema.pg.ts` are the two

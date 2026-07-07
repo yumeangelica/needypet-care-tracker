@@ -52,6 +52,23 @@ export function todayInTimeZone(timezone: string, now: Date = new Date()): strin
   }).format(now);
 }
 
+/**
+ * The current hour (0–23) in the given IANA timezone. Used by the daily digest
+ * to gate sending on each user's own local clock (DST-correct via Intl).
+ */
+export function hourInTimeZone(timezone: string, now: Date = new Date()): number {
+  if (!isSupportedTimeZone(timezone)) {
+    throw new Error(`Invalid timezone: ${timezone}`);
+  }
+  const hour = new Intl.DateTimeFormat('en-GB', {
+    timeZone: timezone,
+    hour: '2-digit',
+    hour12: false,
+  }).format(now);
+  // Some runtimes format midnight as '24'; normalize it to 0.
+  return Number(hour === '24' ? '00' : hour);
+}
+
 /** Lexicographic compare is chronological compare for YYYY-MM-DD strings. */
 export function compareDateOnly(a: string, b: string): -1 | 0 | 1 {
   if (a === b) {

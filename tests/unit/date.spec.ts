@@ -3,6 +3,7 @@ import {
   addDaysDateOnly,
   compareDateOnly,
   diffDaysDateOnly,
+  hourInTimeZone,
   isFutureDateOnly,
   isSupportedTimeZone,
   isValidDateOnly,
@@ -52,6 +53,27 @@ describe('todayInTimeZone', () => {
 
   it('throws on unsupported timezones', () => {
     expect(() => todayInTimeZone('Not/AZone')).toThrow('Invalid timezone');
+  });
+});
+
+describe('hourInTimeZone', () => {
+  // 11:00 UTC: local hour shifts by each zone's offset.
+  const instant = new Date('2026-01-01T11:00:00Z');
+
+  it('computes the local hour for offset timezones', () => {
+    expect(hourInTimeZone('Europe/London', instant)).toBe(11); // UTC+0 in winter
+    expect(hourInTimeZone('Europe/Helsinki', instant)).toBe(13); // UTC+2 in winter
+    expect(hourInTimeZone('America/New_York', instant)).toBe(6); // UTC-5 in winter
+    expect(hourInTimeZone('Pacific/Kiritimati', instant)).toBe(1); // UTC+14 -> next day 01:00
+  });
+
+  it('normalizes midnight to 0', () => {
+    const midnightUtc = new Date('2026-01-01T00:00:00Z');
+    expect(hourInTimeZone('Europe/London', midnightUtc)).toBe(0);
+  });
+
+  it('throws on unsupported timezones', () => {
+    expect(() => hourInTimeZone('Not/AZone')).toThrow('Invalid timezone');
   });
 });
 
