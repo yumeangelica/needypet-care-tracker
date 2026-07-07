@@ -69,6 +69,7 @@ const editingProfile = ref(false);
 const profileUserName = ref('');
 const profileEmail = ref('');
 const profileTimezone = ref('');
+const profileDigestOptIn = ref(false);
 const profilePassword = ref('');
 const profileSaving = ref(false);
 const profileError = ref('');
@@ -81,6 +82,7 @@ function openProfileForm(): void {
   profileUserName.value = me.value?.userName ?? '';
   profileEmail.value = me.value?.email ?? '';
   profileTimezone.value = me.value?.timezone ?? '';
+  profileDigestOptIn.value = me.value?.digestOptIn ?? false;
   profilePassword.value = '';
   profileFieldErrors.value = {};
   profileError.value = '';
@@ -105,6 +107,7 @@ async function saveProfile() {
     userName: profileUserName.value.trim(),
     email: profileEmail.value.trim(),
     timezone: profileTimezone.value,
+    digestOptIn: profileDigestOptIn.value,
     currentPassword: profilePassword.value,
   };
   const parsed = profileUpdateSchema.safeParse(input);
@@ -266,6 +269,8 @@ async function confirmDelete(): Promise<void> {
           </dd>
           <dt>Timezone</dt>
           <dd>{{ me.timezone }}</dd>
+          <dt>Daily reminders</dt>
+          <dd>{{ me.digestOptIn ? 'On 🐾' : 'Off' }}</dd>
         </dl>
 
         <div v-if="!me.emailConfirmed" class="resend-row">
@@ -341,6 +346,18 @@ async function confirmDelete(): Promise<void> {
                 <option v-for="tz in timezones" :key="tz" :value="tz">{{ tz }}</option>
               </select>
             </FormField>
+
+            <div class="reminder-toggle">
+              <input
+                id="digest-opt-in"
+                v-model="profileDigestOptIn"
+                type="checkbox"
+                class="reminder-checkbox"
+              />
+              <label for="digest-opt-in" class="reminder-label">
+                Email me a daily nudge about unfinished care moments 🐾
+              </label>
+            </div>
 
             <FormField
               v-slot="{ id, describedBy, invalid }"
@@ -581,6 +598,33 @@ async function confirmDelete(): Promise<void> {
   margin: 0 0 0.25rem;
   font-size: 0.72rem;
   color: var(--color-foreground);
+}
+
+.reminder-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: var(--tap-target-size);
+  padding: 0.35rem 0;
+}
+
+.reminder-checkbox {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--color-primary-foreground);
+  cursor: pointer;
+}
+
+.reminder-checkbox:focus-visible {
+  outline: 2px solid var(--color-primary-foreground);
+  outline-offset: 2px;
+}
+
+.reminder-label {
+  font-size: 0.85rem;
+  line-height: 1.35;
+  cursor: pointer;
 }
 
 .state-note {

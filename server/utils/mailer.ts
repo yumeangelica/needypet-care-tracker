@@ -1,3 +1,5 @@
+import type { DigestPetSection } from '#shared/utils/digest';
+
 export interface MailMessage {
   to: string;
   subject: string;
@@ -106,6 +108,36 @@ export function passwordResetMessage(to: string, link: string): MailMessage {
       '',
       'The link is valid for 1 hour. If this was not you, you can safely',
       'ignore this message — your password stays unchanged.',
+    ].join('\n'),
+  };
+}
+
+/**
+ * The daily nudge about unfinished care tasks. One line per pet listing the
+ * categories still waiting today. Callers only build this when there is at
+ * least one open task across the recipient's pets.
+ */
+export function dailyDigestMessage(
+  to: string,
+  sections: DigestPetSection[],
+  homeLink: string,
+): MailMessage {
+  const petLines = sections.map(
+    (section) => `• ${section.petName} — ${section.needs.map((need) => need.category).join(', ')}`,
+  );
+  return {
+    to,
+    subject: 'Your pets still need you today 🐾',
+    text: [
+      'A few care moments are still waiting:',
+      '',
+      ...petLines,
+      '',
+      'Open NeedyPet to log them:',
+      homeLink,
+      '',
+      'You get this because daily reminders are on. Turn them off any time',
+      'from your profile.',
     ].join('\n'),
   };
 }

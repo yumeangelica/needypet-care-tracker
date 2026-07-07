@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { confirmEmailMessage, passwordResetMessage, ResendMailer } from '../../server/utils/mailer';
+import {
+  confirmEmailMessage,
+  dailyDigestMessage,
+  passwordResetMessage,
+  ResendMailer,
+} from '../../server/utils/mailer';
 
 const OPTIONS = {
   apiUrl: 'https://api.resend.test/emails',
@@ -66,5 +71,21 @@ describe('message builders', () => {
     expect(message.to).toBe('user@example.com');
     expect(message.text).toContain('https://app.test/reset-password?token=t2');
     expect(message.subject.toLowerCase()).toContain('reset');
+  });
+
+  it('dailyDigestMessage lists each pet with its open tasks and the home link', () => {
+    const message = dailyDigestMessage(
+      'owner@example.com',
+      [
+        { petName: 'Bella', needs: [{ category: 'Fresh water', description: '' }, { category: 'Evening walk', description: '' }] },
+        { petName: 'Misty', needs: [{ category: 'Breakfast', description: '' }] },
+      ],
+      'https://app.test/home',
+    );
+    expect(message.to).toBe('owner@example.com');
+    expect(message.subject).toContain('🐾');
+    expect(message.text).toContain('Bella — Fresh water, Evening walk');
+    expect(message.text).toContain('Misty — Breakfast');
+    expect(message.text).toContain('https://app.test/home');
   });
 });

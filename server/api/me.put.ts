@@ -43,6 +43,7 @@ export default defineEventHandler(async (event) => {
       userName: input.userName,
       email,
       timezone: input.timezone,
+      digestOptIn: input.digestOptIn,
       ...(confirm
         ? {
             emailConfirmed: false,

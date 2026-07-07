@@ -38,7 +38,13 @@ export function uniqueName(prefix = 'user'): string {
 /** JSON request against the test server; 4xx/5xx come back as values. */
 export async function api<T = any>(
   path: string,
-  opts: { method?: string; body?: unknown; cookie?: string; ip?: string } = {},
+  opts: {
+    method?: string;
+    body?: unknown;
+    cookie?: string;
+    ip?: string;
+    headers?: Record<string, string>;
+  } = {},
 ): Promise<ApiResponse<T>> {
   const res = await fetch(new URL(path, process.env.NUXT_TEST_URL), {
     method: opts.method ?? 'GET',
@@ -46,6 +52,7 @@ export async function api<T = any>(
       'x-forwarded-for': opts.ip ?? uniqueIp(),
       ...(opts.body !== undefined ? { 'content-type': 'application/json' } : {}),
       ...(opts.cookie ? { cookie: opts.cookie } : {}),
+      ...opts.headers,
     },
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     redirect: 'manual',
@@ -124,6 +131,8 @@ export async function createUser(
     password: string;
     timezone: string;
     emailConfirmed: boolean;
+    digestOptIn: boolean;
+    lastDigestDate: string | null;
   }> = {},
 ): Promise<TestUser> {
   const userName = overrides.userName ?? uniqueName('user');
@@ -140,6 +149,8 @@ export async function createUser(
     passwordHash: bcrypt.hashSync(password, 4),
     emailConfirmed: overrides.emailConfirmed ?? true,
     timezone,
+    digestOptIn: overrides.digestOptIn ?? false,
+    lastDigestDate: overrides.lastDigestDate ?? null,
     createdAt: now,
     updatedAt: now,
   });

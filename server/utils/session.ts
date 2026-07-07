@@ -28,5 +28,6 @@ export function toPublicUser(row: UserRow) {
     email: row.email,
     emailConfirmed: row.emailConfirmed,
     timezone: row.timezone,
+    digestOptIn: row.digestOptIn,
   };
 }

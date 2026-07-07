@@ -41,6 +41,7 @@ export interface PublicUser {
   email: string;
   emailConfirmed: boolean;
   timezone: string;
+  digestOptIn: boolean;
 }
 
 export interface Pet {

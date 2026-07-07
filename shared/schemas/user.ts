@@ -62,6 +62,7 @@ export const profileUpdateSchema = z.object({
   userName: userNameSchema,
   email: emailSchema,
   timezone: timezoneSchema,
+  digestOptIn: z.boolean(),
   currentPassword: z.string().min(1, 'Current password is required'),
 });
 

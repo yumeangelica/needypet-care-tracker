@@ -45,6 +45,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       NUXT_SESSION_PASSWORD: 'needypet-integration-test-session-password',
       NUXT_UPLOADS_DIR: uploadsDir,
       NUXT_MAILER_PROVIDER: '',
+      NUXT_DIGEST_SECRET: 'itest-digest-secret',
     },
   });
   await loadFixture();
