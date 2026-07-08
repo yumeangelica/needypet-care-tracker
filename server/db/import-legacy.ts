@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { useDb, withTransaction } from './index';
 import { careRecords, needs, petCaretakers, pets, users } from './schema';
 import type { ImportContext, PreparedRows, RawBundle } from './import/validate';

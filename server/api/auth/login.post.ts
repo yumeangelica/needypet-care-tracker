@@ -1,8 +1,8 @@
-import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { loginSchema } from '#shared/schemas/user';
 import { firstRow, useDb } from '../../db';
 import { users } from '../../db/schema';
+import { hashUserPassword, passwordNeedsRehash, verifyUserPassword } from '../../utils/password';
 import { checkRateLimit, rateLimitIp, resetRateLimit } from '../../utils/rateLimit';
 import { toPublicUser } from '../../utils/session';
 
@@ -19,8 +19,16 @@ export default defineEventHandler(async (event) => {
 
   const user = firstRow(await useDb().select().from(users).where(eq(users.userName, input.userName)));
   // Generic message on both misses: don't leak which accounts exist.
-  if (!user || !(await bcrypt.compare(input.password, user.passwordHash))) {
+  if (!user || !(await verifyUserPassword(input.password, user.passwordHash))) {
     unauthorized('Invalid credentials');
+  }
+
+  // Upgrade legacy bcrypt hashes to argon2id on a successful sign-in.
+  if (passwordNeedsRehash(user.passwordHash)) {
+    await useDb()
+      .update(users)
+      .set({ passwordHash: await hashUserPassword(input.password) })
+      .where(eq(users.id, user.id));
   }
 
   resetRateLimit(accountKey);

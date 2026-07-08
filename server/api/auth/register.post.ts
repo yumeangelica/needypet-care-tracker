@@ -1,9 +1,9 @@
-import bcrypt from 'bcryptjs';
 import { eq, or } from 'drizzle-orm';
 import { registerSchema } from '#shared/schemas/user';
 import { firstRow, useDb } from '../../db';
 import { users } from '../../db/schema';
 import { confirmEmailMessage, useMailer } from '../../utils/mailer';
+import { hashUserPassword } from '../../utils/password';
 import { checkRateLimit, rateLimitIp } from '../../utils/rateLimit';
 import { createToken, expiryFromNow } from '../../utils/tokens';
 
@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
     id: crypto.randomUUID(),
     userName: input.userName,
     email,
-    passwordHash: await bcrypt.hash(input.newPassword, 10),
+    passwordHash: await hashUserPassword(input.newPassword),
     emailConfirmed: false,
     emailConfirmToken: confirm.tokenHash,
     emailConfirmExpiresAt: expiryFromNow(24),

@@ -6,7 +6,10 @@ the legacy Vue/Vite + Express + MongoDB app (kept read-only next door as
 reference).
 
 Stack: Nuxt 4 · Vue 3 · TypeScript · Tailwind CSS v4 · Nuxt server routes ·
-Drizzle ORM · SQLite locally / Postgres (Supabase) in production · Bun.
+Drizzle ORM · SQLite locally / Postgres (Supabase) in production · Bun. Bun-native
+throughout: `bun:sqlite` and `Bun.sql` drive the database, `Bun.password`
+(argon2id) hashes passwords, and the test suite runs under `bun --bun vitest` — no
+Node runtime required.
 
 ## Features
 

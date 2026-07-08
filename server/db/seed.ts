@@ -1,5 +1,5 @@
-import bcrypt from 'bcryptjs';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
+import { hashUserPassword } from '../utils/password';
 import { addDaysDateOnly, todayInTimeZone } from '../../shared/utils/date';
 import { useDb } from './index';
 import { careRecords, needs, petCaretakers, pets, users } from './schema';
@@ -43,7 +43,7 @@ await db.insert(users)
       id: ownerId,
       userName: 'demo',
       email: 'demo@example.com',
-      passwordHash: bcrypt.hashSync('DemoPaws123!', 10),
+      passwordHash: await hashUserPassword('DemoPaws123!'),
       emailConfirmed: true,
       timezone: 'Europe/Helsinki',
       createdAt: now,
@@ -53,7 +53,7 @@ await db.insert(users)
       id: helperId,
       userName: 'helper',
       email: 'helper@example.com',
-      passwordHash: bcrypt.hashSync('HelperPaws123!', 10),
+      passwordHash: await hashUserPassword('HelperPaws123!'),
       emailConfirmed: true,
       timezone: 'Europe/Helsinki',
       createdAt: now,
