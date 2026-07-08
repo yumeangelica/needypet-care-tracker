@@ -1,7 +1,6 @@
-import bcrypt from 'bcryptjs';
-import Database from 'better-sqlite3';
+import { Database } from 'bun:sqlite';
 import { eq } from 'drizzle-orm';
-import { type BetterSQLite3Database, drizzle } from 'drizzle-orm/better-sqlite3';
+import { type BunSQLiteDatabase, drizzle } from 'drizzle-orm/bun-sqlite';
 // The sqlite schema module is imported directly (not ./schema) so a
 // NUXT_DB_URL inherited from the shell can't flip this process to pg.
 import * as schema from '../../server/db/schema.sqlite';
@@ -95,7 +94,7 @@ export async function loginAs(userName: string, password: string): Promise<strin
 
 /* ---------------------------------------------------------------- DB side */
 
-type TestDb = BetterSQLite3Database<typeof schema>;
+type TestDb = BunSQLiteDatabase<typeof schema>;
 
 let dbHandle: TestDb | null = null;
 
@@ -146,10 +145,11 @@ export async function createUser(
   const id = crypto.randomUUID();
   await testDb().insert(users).values({
     id,
+    // Low-cost bcrypt keeps fixture creation fast; verifyPassword accepts it, so
+    // this also exercises the legacy-hash back-compat path against real logins.
+    passwordHash: await Bun.password.hash(password, { algorithm: 'bcrypt', cost: 4 }),
     userName,
     email,
-    // Low cost keeps fixture creation fast; the hash format stays real.
-    passwordHash: bcrypt.hashSync(password, 4),
     emailConfirmed: overrides.emailConfirmed ?? true,
     timezone,
     locale,

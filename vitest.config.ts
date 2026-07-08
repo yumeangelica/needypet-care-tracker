@@ -8,5 +8,9 @@ export default defineVitestConfig({
     // config (vitest.integration.config.ts / bun run test:integration).
     environment: 'node',
     include: ['tests/unit/**/*.spec.ts'],
+    // Under `bun --bun vitest`, zod v4's package resolves in a way that leaves
+    // the `z` import undefined in the schema specs. Inlining routes zod through
+    // Vite's transform so it loads consistently on the Bun runtime.
+    server: { deps: { inline: ['zod'] } },
   },
 });

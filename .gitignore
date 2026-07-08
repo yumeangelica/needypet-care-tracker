@@ -31,5 +31,7 @@ coverage
 
 .todo.md
 
-# Personal developer run/setup notes (not for the public repo)
+# Personal developer notes + AI-agent guides (not for the public repo)
 DEV_NOTES.md
+AGENTS.md
+CLAUDE.md

@@ -17,9 +17,9 @@ server to Postgres — no code changes.
   `NUXT_DB_URL`. The sqlite table types stay the canonical TypeScript typing;
   the pg branch is cast (documented unsoundness confined to `schema.ts` +
   `db/index.ts`).
-- `server/db/index.ts` — `useDb()` builds a postgres-js client
+- `server/db/index.ts` — `useDb()` builds a native `Bun.sql` client
   (`prepare: false` for Supabase's transaction pooler on port 6543) or the
-  better-sqlite3 client. All queries use the awaited drizzle style and
+  `bun:sqlite` client. All queries use the awaited drizzle style and
   `withTransaction()`, which behave identically on both dialects.
 
 ## Deploying against Supabase

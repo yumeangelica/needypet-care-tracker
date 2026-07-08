@@ -1,9 +1,9 @@
-import bcrypt from 'bcryptjs';
 import { and, eq, ne, or } from 'drizzle-orm';
 import { profileUpdateSchema } from '#shared/schemas/user';
 import { firstRow, useDb } from '../db';
 import { users } from '../db/schema';
 import { confirmEmailMessage, useMailer } from '../utils/mailer';
+import { verifyUserPassword } from '../utils/password';
 import { requireAppUser, toPublicUser } from '../utils/session';
 import { createToken, expiryFromNow } from '../utils/tokens';
 
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event);
   const input = await readValidatedBodyOr422(event, profileUpdateSchema);
 
-  if (!(await bcrypt.compare(input.currentPassword, user.passwordHash))) {
+  if (!(await verifyUserPassword(input.currentPassword, user.passwordHash))) {
     unauthorized('Invalid current password');
   }
 

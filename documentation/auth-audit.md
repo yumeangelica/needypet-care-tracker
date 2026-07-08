@@ -13,8 +13,11 @@ Reviewed 2026-07-06 while adding rate limiting. Covers the endpoints under
   hashes (`server/utils/tokens.ts`), expire (24 h confirm / 1 h reset), and are
   single-use (cleared on redemption). A repeated forgot request rotates the
   token — the latest link wins.
-- **Passwords**: bcrypt cost 10; password strength enforced by the shared zod
-  schema on both client and server.
+- **Passwords**: hashed with `Bun.password` argon2id (OWASP first choice) via
+  `server/utils/password.ts`; password strength enforced by the shared zod schema
+  on both client and server. Legacy accounts keep their imported bcrypt hashes —
+  `Bun.password.verify` accepts both, and a successful login upgrades a bcrypt hash
+  to argon2id in place (rehash-on-login).
 - **Sessions**: sealed cookie via nuxt-auth-utils, `httpOnly`, `secure`,
   `sameSite=lax`, 10 h max age. `requireAppUser` re-reads the user row on every
   request, so deleted accounts are locked out immediately even with a live
@@ -61,6 +64,6 @@ locked out, while failures against one account stay capped even from many IPs.
 - **Session invalidation on reset**: sessions are stateless sealed cookies, so
   a password reset does not log out other devices; they stay valid until the
   10 h expiry. Acceptable for now; documented in `reset-password.post.ts`.
-- **bcrypt cost**: 10 matches the legacy data (hashes are imported verbatim).
-  Raising the cost would only apply to new hashes; consider rehash-on-login if
-  this is ever bumped.
+- **Hashing**: new hashes use `Bun.password` argon2id; imported legacy bcrypt
+  hashes still verify and are upgraded to argon2id on the next successful login
+  (rehash-on-login in `login.post.ts`). No forced reset needed.

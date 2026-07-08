@@ -57,7 +57,7 @@ export const loginSchema = z.object({
 
 /**
  * Profile edits are gated by the current password. Its shape is only
- * "non-empty" — verification happens against the bcrypt hash, not the
+ * "non-empty" — verification happens against the stored password hash, not the
  * strength rules (an older account may predate them).
  */
 export const profileUpdateSchema = z.object({

@@ -10,10 +10,10 @@ import {
   stopServer,
   useTestContext,
 } from '@nuxt/test-utils/e2e';
-import Database from 'better-sqlite3';
+import { Database } from 'bun:sqlite';
 import { consola } from 'consola';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import { drizzle } from 'drizzle-orm/bun-sqlite';
+import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 
 /**
  * Builds the app once and boots ONE production Nitro server for the whole

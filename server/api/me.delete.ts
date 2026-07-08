@@ -1,9 +1,9 @@
-import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { accountDeleteSchema } from '#shared/schemas/user';
 import { useDb } from '../db';
 import { pets, users } from '../db/schema';
 import { removeStoredImageQuietly } from '../utils/imageStorage';
+import { verifyUserPassword } from '../utils/password';
 import { requireAppUser } from '../utils/session';
 
 /**
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event);
   const input = await readValidatedBodyOr422(event, accountDeleteSchema);
 
-  if (!(await bcrypt.compare(input.currentPassword, user.passwordHash))) {
+  if (!(await verifyUserPassword(input.currentPassword, user.passwordHash))) {
     unauthorized('Invalid current password');
   }
 

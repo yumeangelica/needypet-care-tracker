@@ -1,8 +1,8 @@
-import bcrypt from 'bcryptjs';
 import { and, eq, gt } from 'drizzle-orm';
 import { resetPasswordSchema } from '#shared/schemas/user';
 import { firstRow, useDb } from '../../db';
 import { users } from '../../db/schema';
+import { hashUserPassword } from '../../utils/password';
 import { checkRateLimit, rateLimitIp } from '../../utils/rateLimit';
 import { hashToken } from '../../utils/tokens';
 
@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
   await db
     .update(users)
     .set({
-      passwordHash: await bcrypt.hash(input.newPassword, 10),
+      passwordHash: await hashUserPassword(input.newPassword),
       passwordResetToken: null,
       passwordResetExpiresAt: null,
       emailConfirmed: true,

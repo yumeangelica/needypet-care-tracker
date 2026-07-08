@@ -9,7 +9,7 @@ full runtime environment, pet-photo storage, and the daily-digest cron.
 ```bash
 bun install
 bun run build          # produces .output/
-node .output/server/index.mjs   # or: bun .output/server/index.mjs
+bun .output/server/index.mjs   # or: node .output/server/index.mjs
 ```
 
 Run migrations at deploy time, never at runtime (the dev-only migrate plugin is
@@ -107,4 +107,4 @@ emitted into `.output/public/`. There are no PWA-specific environment variables.
   always fetched fresh.
 - The service worker is disabled in dev (`pwa.devOptions.enabled: false`); test
   installability and offline behaviour against a production build
-  (`bun run build` → `node .output/server/index.mjs`).
+  (`bun run build` → `bun .output/server/index.mjs`).
