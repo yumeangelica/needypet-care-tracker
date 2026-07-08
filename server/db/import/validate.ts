@@ -20,7 +20,7 @@ import {
 
 /**
  * Pure bundle validation for the legacy import (documentation/migration.md).
- * No db/h3 imports so it runs under plain node in unit tests. Collects EVERY
+ * No db/h3 imports so unit tests can exercise it without Nitro. Collects EVERY
  * failure instead of stopping at the first; the import is all-or-nothing.
  */
 

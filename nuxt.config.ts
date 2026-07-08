@@ -6,8 +6,8 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['nuxt-auth-utils', '@vite-pwa/nuxt'],
   css: ['~/assets/css/main.css'],
-  // We use vue-i18n directly as a plugin (not @nuxtjs/i18n), so auto-import its
-  // Composition-API entry point to match how Nuxt composables are used elsewhere.
+  // vue-i18n is installed directly as a plugin (not @nuxtjs/i18n), so auto-import
+  // its Composition-API entry point to match how Nuxt composables are used elsewhere.
   imports: {
     presets: [{ from: 'vue-i18n', imports: ['useI18n'] }],
   },
@@ -15,12 +15,25 @@ export default defineNuxtConfig({
   // precache it and serve it as the navigation fallback when the network is down
   // (an SSR-only route has no cached document to fall back to).
   nitro: {
+    preset: 'bun',
     prerender: {
       routes: ['/offline'],
     },
   },
   vite: {
     plugins: [tailwindcss()],
+    optimizeDeps: {
+      include: [
+        '@lucide/vue',
+        '@vue/devtools-core',
+        '@vue/devtools-kit',
+        'vue-i18n',
+        'zod',
+      ],
+    },
+    ssr: {
+      noExternal: ['zod'],
+    },
   },
   app: {
     head: {

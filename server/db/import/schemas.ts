@@ -6,8 +6,8 @@ import { hasExactlyOneMeasurement } from '../../../shared/utils/measurement';
 /**
  * Zod shapes for the legacy JSON export bundle (documentation/migration.md).
  * Structural, per-row validation only; cross-file referential checks live in
- * validate.ts. Relative imports keep this module loadable in plain node
- * (vitest, CLI) without Nuxt aliases.
+ * validate.ts. Relative imports keep this module loadable from Vitest and CLI
+ * commands without Nuxt aliases.
  */
 
 const legacyIdSchema = z.string().min(1, 'legacyId must not be empty');
