@@ -75,7 +75,9 @@ export default defineEventHandler(async (event) => {
     }
 
     try {
-      await useMailer().send(dailyDigestMessage(user.email, sections, homeLink));
+      await useMailer().send(
+        dailyDigestMessage(user.email, sections, homeLink, user.locale as 'en' | 'fi'),
+      );
       // Stamp only after a successful send so a mailer outage retries next run.
       await db
         .update(users)

@@ -17,6 +17,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{ saved: [need: Need]; cancel: [] }>();
 
+const { t } = useI18n();
+
 const isEdit = computed(() => Boolean(props.need));
 
 const category = ref(props.need?.category ?? '');
@@ -90,7 +92,7 @@ async function submit() {
     } else if (error instanceof FetchError && error.data?.message) {
       errorMessage.value = error.data.message;
     } else {
-      errorMessage.value = 'Something went wrong. Please try again.';
+      errorMessage.value = t('errors.generic');
     }
   } finally {
     submitting.value = false;
@@ -100,41 +102,41 @@ async function submit() {
 
 <template>
   <form class="need-form" novalidate @submit.prevent="submit">
-    <FormField v-slot="{ id, describedBy, invalid }" label="Care task" :error="firstError('category')">
+    <FormField v-slot="{ id, describedBy, invalid }" :label="$t('needs.careTask')" :error="firstError('category')">
       <input
         :id
         v-model="category"
         type="text"
         class="form-field-input"
-        placeholder="e.g. Evening walk"
+        :placeholder="$t('needs.careTaskPlaceholder')"
         :aria-describedby="describedBy"
         :aria-invalid="invalid"
         required
       />
     </FormField>
 
-    <FormField v-slot="{ id, describedBy, invalid }" label="Description (optional)" :error="firstError('description')">
+    <FormField v-slot="{ id, describedBy, invalid }" :label="$t('pets.descriptionOptional')" :error="firstError('description')">
       <textarea
         :id
         v-model="description"
         class="form-field-input need-form-textarea"
         rows="2"
-        placeholder="Any helpful details"
+        :placeholder="$t('needs.detailsPlaceholder')"
         :aria-describedby="describedBy"
         :aria-invalid="invalid"
       />
     </FormField>
 
     <fieldset v-if="!isEdit" class="need-form-type">
-      <legend class="form-label">Measured as</legend>
+      <legend class="form-label">{{ $t('needs.measuredAs') }}</legend>
       <div class="need-form-type-options">
         <label class="need-form-radio" :class="{ selected: measurementType === 'duration' }">
           <input v-model="measurementType" type="radio" value="duration" name="measurement-type" />
-          Time (minutes)
+          {{ $t('needs.timeMinutes') }}
         </label>
         <label class="need-form-radio" :class="{ selected: measurementType === 'quantity' }">
           <input v-model="measurementType" type="radio" value="quantity" name="measurement-type" />
-          Amount (ml or g)
+          {{ $t('needs.amountMlOrG') }}
         </label>
       </div>
     </fieldset>
@@ -142,7 +144,7 @@ async function submit() {
     <div class="need-form-measurement">
       <FormField
         v-slot="{ id, describedBy, invalid }"
-        :label="measurementType === 'duration' ? 'Minutes per day' : 'Amount per day'"
+        :label="measurementType === 'duration' ? $t('needs.minutesPerDay') : $t('needs.amountPerDay')"
         :error="measurementError"
         class="need-form-value"
       >
@@ -152,7 +154,7 @@ async function submit() {
           type="text"
           inputmode="numeric"
           class="form-field-input"
-          :placeholder="measurementType === 'duration' ? 'e.g. 30' : 'e.g. 200'"
+          :placeholder="measurementType === 'duration' ? $t('needs.minutesPlaceholder') : $t('needs.amountPlaceholder')"
           :aria-describedby="describedBy"
           :aria-invalid="invalid"
           required
@@ -160,7 +162,7 @@ async function submit() {
         />
       </FormField>
 
-      <FormField v-if="measurementType === 'quantity'" v-slot="{ id }" label="Unit" class="need-form-unit">
+      <FormField v-if="measurementType === 'quantity'" v-slot="{ id }" :label="$t('needs.unit')" class="need-form-unit">
         <select :id="id" v-model="quantityUnit" class="form-field-input">
           <option value="ml">ml</option>
           <option value="g">g</option>
@@ -172,10 +174,10 @@ async function submit() {
 
     <div class="need-form-actions">
       <AppButton variant="secondary" type="button" :disabled="submitting" @click="emit('cancel')">
-        Cancel
+        {{ $t('common.cancel') }}
       </AppButton>
       <AppButton variant="primary" type="submit" :disabled="submitting">
-        {{ submitting ? 'Just a moment...' : isEdit ? 'Save Changes' : 'Add Care Task' }}
+        {{ submitting ? $t('common.justAMoment') : isEdit ? $t('common.saveChanges') : $t('needs.addCareTask') }}
       </AppButton>
     </div>
   </form>

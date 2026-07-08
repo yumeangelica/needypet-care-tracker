@@ -12,6 +12,7 @@ describe('profileUpdateSchema', () => {
     userName: 'demo',
     email: 'demo@example.com',
     timezone: 'Europe/Helsinki',
+    locale: 'en',
     digestOptIn: false,
     currentPassword: 'DemoPaws123!',
   };
@@ -44,6 +45,14 @@ describe('profileUpdateSchema', () => {
 
   it('rejects a too-short username', () => {
     expect(profileUpdateSchema.safeParse({ ...valid, userName: 'ab' }).success).toBe(false);
+  });
+
+  it('accepts the supported locales and rejects anything else', () => {
+    expect(profileUpdateSchema.safeParse({ ...valid, locale: 'en' }).success).toBe(true);
+    expect(profileUpdateSchema.safeParse({ ...valid, locale: 'fi' }).success).toBe(true);
+    expect(profileUpdateSchema.safeParse({ ...valid, locale: 'de' }).success).toBe(false);
+    const { locale: _omit, ...withoutLocale } = valid;
+    expect(profileUpdateSchema.safeParse(withoutLocale).success).toBe(false);
   });
 });
 

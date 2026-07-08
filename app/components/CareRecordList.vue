@@ -46,13 +46,13 @@ function canMutate(record: CareRecordWithActor): boolean {
 <template>
   <div class="record-log">
     <p v-if="showTzHint" class="record-log-tz-hint">
-      Times are shown in the owner's timezone ({{ ownerTimezone }}).
+      {{ $t('records.tzHint', { timezone: ownerTimezone }) }}
     </p>
-    <ul class="record-log-list" aria-label="Care log entries">
+    <ul class="record-log-list" :aria-label="$t('records.careLogEntries')">
       <li v-for="record in records" :key="record.id" class="record-log-item">
         <div class="record-log-main">
           <span class="record-log-time">{{ recordTime(record) }}</span>
-          <span class="record-log-actor">{{ record.actorUserName ?? 'Deleted account' }}</span>
+          <span class="record-log-actor">{{ record.actorUserName ?? $t('common.deletedAccount') }}</span>
           <span class="record-log-amount">{{ getMeasurementValue(record) }} {{ unitLabel }}</span>
         </div>
         <p v-if="record.note" class="record-log-note">{{ record.note }}</p>
@@ -60,20 +60,20 @@ function canMutate(record: CareRecordWithActor): boolean {
           <button
             type="button"
             class="record-log-button"
-            :aria-label="`Edit the ${recordTime(record)} entry`"
+            :aria-label="$t('records.editEntryAria', { time: recordTime(record) })"
             @click="emit('edit', record)"
           >
             <Pencil :size="14" aria-hidden="true" />
-            Edit
+            {{ $t('common.edit') }}
           </button>
           <button
             type="button"
             class="record-log-button record-log-danger"
-            :aria-label="`Remove the ${recordTime(record)} entry`"
+            :aria-label="$t('records.removeEntryAria', { time: recordTime(record) })"
             @click="emit('remove', record)"
           >
             <Trash2 :size="14" aria-hidden="true" />
-            Remove
+            {{ $t('common.remove') }}
           </button>
         </div>
       </li>

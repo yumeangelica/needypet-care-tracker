@@ -8,33 +8,35 @@ const { data: allPets, status } = await useFetch<PetListItem[]>('/api/pets', {
   default: () => [],
 });
 
+const { t } = useI18n();
+
 const ownPets = computed(() => allPets.value.filter((pet) => pet.isOwner));
 const caredPets = computed(() => allPets.value.filter((pet) => !pet.isOwner));
 
 function taskLabel(count: number): string {
-  return count === 1 ? '1 care task today' : `${count} care tasks today`;
+  return t('pets.tasksToday', count, { named: { count } });
 }
 </script>
 
 <template>
   <div class="content-wrapper">
     <div v-if="status === 'pending'" class="loading-note" aria-live="polite">
-      <p>Fetching your family members...</p>
+      <p>{{ $t('pets.fetchingFamily') }}</p>
     </div>
 
     <template v-else>
       <section class="pets-surface" aria-labelledby="my-pets-title">
         <div class="section-head">
-          <h1 id="my-pets-title" class="page-title title-underline">My Pets</h1>
+          <h1 id="my-pets-title" class="page-title title-underline">{{ $t('pets.myPets') }}</h1>
           <NuxtLink to="/pets/new" class="custom-button">
             <CirclePlus :size="20" aria-hidden="true" />
-            Welcome a Pet
+            {{ $t('pets.welcomeAPet') }}
           </NuxtLink>
         </div>
 
         <div v-if="ownPets.length === 0 && caredPets.length === 0" class="empty-state">
-          <h2 class="page-title-sm">No pets yet</h2>
-          <p>Welcome your first furry friend to get started! 🐾</p>
+          <h2 class="page-title-sm">{{ $t('pets.noPetsYet') }}</h2>
+          <p>{{ $t('pets.noPetsNote') }}</p>
         </div>
 
         <ul v-else class="pet-grid">
@@ -53,7 +55,7 @@ function taskLabel(count: number): string {
         </ul>
 
         <template v-if="caredPets.length > 0">
-          <h2 class="page-title-sm title-underline care-section-title">Pets I Help Care For</h2>
+          <h2 class="page-title-sm title-underline care-section-title">{{ $t('pets.petsIHelpCareFor') }}</h2>
           <ul class="pet-grid">
             <li v-for="pet in caredPets" :key="pet.id">
               <button type="button" class="pet-card" @click="navigateTo(`/pets/${pet.id}`)">

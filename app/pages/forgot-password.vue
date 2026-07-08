@@ -6,6 +6,8 @@ import { forgotPasswordSchema } from '#shared/schemas/user';
 
 definePageMeta({ layout: 'auth' });
 
+const { t } = useI18n();
+
 const email = ref('');
 const submitting = ref(false);
 const successMessage = ref('');
@@ -36,7 +38,7 @@ async function submit(): Promise<void> {
     if (error instanceof FetchError && error.statusCode === 422 && error.data?.errorDetails) {
       fieldErrors.value = error.data.errorDetails;
     } else {
-      errorMessage.value = 'Something went wrong. Please try again.';
+      errorMessage.value = t('errors.generic');
     }
   } finally {
     submitting.value = false;
@@ -48,14 +50,14 @@ async function submit(): Promise<void> {
   <div class="login-register-container auth-form-card">
     <div class="paw-header-container auth-card-header">
       <PawPrint aria-hidden="true" />
-      <h1 class="page-title title-underline">Forgot Your Paw Code?</h1>
+      <h1 class="page-title title-underline">{{ $t('auth.forgotTitle') }}</h1>
     </div>
-    <p class="auth-subtitle">We'll email you a link to set a new one 🐾</p>
+    <p class="auth-subtitle">{{ $t('auth.forgotSubtitle') }}</p>
 
     <p v-if="successMessage" class="custom-valid-message" role="status">{{ successMessage }}</p>
 
     <form v-else class="auth-form" novalidate @submit.prevent="submit">
-      <label class="form-label" for="forgot-email">Email</label>
+      <label class="form-label" for="forgot-email">{{ $t('auth.email') }}</label>
       <div class="auth-field">
         <input
           id="forgot-email"
@@ -63,7 +65,7 @@ async function submit(): Promise<void> {
           type="email"
           class="auth-field-input"
           autocomplete="email"
-          placeholder="you@example.com"
+          :placeholder="$t('auth.emailPlaceholder')"
           :aria-invalid="fieldErrors.email ? true : undefined"
           :aria-describedby="fieldErrors.email ? 'forgot-email-error' : undefined"
           required
@@ -75,11 +77,11 @@ async function submit(): Promise<void> {
       <p v-if="errorMessage" class="custom-error-message" role="alert">{{ errorMessage }}</p>
       <div class="auth-action-row">
         <button type="submit" class="action-button primary-action-button" :disabled="submitting">
-          {{ submitting ? 'Just a moment...' : 'Send Reset Link' }}
+          {{ submitting ? $t('common.justAMoment') : $t('auth.sendResetLink') }}
         </button>
       </div>
     </form>
 
-    <NuxtLink to="/login" class="auth-secondary-link">Back to sign in</NuxtLink>
+    <NuxtLink to="/login" class="auth-secondary-link">{{ $t('auth.backToSignIn') }}</NuxtLink>
   </div>
 </template>

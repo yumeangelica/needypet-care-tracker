@@ -4,7 +4,8 @@
 // connection), so it stays a static, self-contained page.
 definePageMeta({ layout: 'auth' });
 
-useHead({ title: 'Offline · NeedyPet' });
+const { t } = useI18n();
+useHead({ title: t('offline.pageTitle') });
 
 function retry() {
   // A hard reload lets the service worker re-attempt the real page once the
@@ -18,13 +19,10 @@ function retry() {
 <template>
   <div class="login-register-container landing-card offline-card">
     <p class="offline-emoji" aria-hidden="true">🐾</p>
-    <h1 class="page-title-lg title-underline">You're offline</h1>
-    <p class="landing-intro">
-      Your furry friends are waiting — their care moments will be right here as
-      soon as you're back online.
-    </p>
+    <h1 class="page-title-lg title-underline">{{ $t('offline.youreOffline') }}</h1>
+    <p class="landing-intro">{{ $t('offline.offlineNote') }}</p>
     <div class="landing-actions">
-      <AppButton variant="primary" @click="retry">Try again</AppButton>
+      <AppButton variant="primary" @click="retry">{{ $t('common.tryAgain') }}</AppButton>
     </div>
   </div>
 </template>

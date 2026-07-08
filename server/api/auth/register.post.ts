@@ -46,7 +46,9 @@ export default defineEventHandler(async (event) => {
   const confirmLink = `${getRequestURL(event).origin}/confirm-email?token=${confirm.token}`;
   await useMailer().send(confirmEmailMessage(email, confirmLink));
 
-  await setUserSession(event, { user: { id: user.id, userName: user.userName } });
+  // New accounts always start in English (the DB column defaults to 'en'); the
+  // in-memory user object above never sets locale, so echo the literal here.
+  await setUserSession(event, { user: { id: user.id, userName: user.userName, locale: 'en' } });
 
   setResponseStatus(event, 201);
   return {

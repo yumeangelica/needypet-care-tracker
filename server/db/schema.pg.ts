@@ -25,6 +25,7 @@ export const users = pgTable('users', {
   passwordResetToken: text('password_reset_token'),
   passwordResetExpiresAt: text('password_reset_expires_at'),
   timezone: text('timezone').notNull(),
+  locale: text('locale').notNull().default('en'), // UI language: 'en' (default) or 'fi'
   digestOptIn: boolean('digest_opt_in').notNull().default(false),
   lastDigestDate: text('last_digest_date'), // YYYY-MM-DD user-local, stamped on a sent digest
   createdAt: text('created_at').notNull(),

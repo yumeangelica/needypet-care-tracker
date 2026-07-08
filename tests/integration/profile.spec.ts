@@ -24,7 +24,7 @@ describe('profile', () => {
       const user = await createUserWithSession({ timezone: TZ });
       const res = await api('/api/me', {
         method: 'PUT',
-        body: { userName: user.userName, email: user.email, timezone: TZ, digestOptIn: false, currentPassword: 'WrongPaws123!' },
+        body: { userName: user.userName, email: user.email, timezone: TZ, locale: 'en', digestOptIn: false, currentPassword: 'WrongPaws123!' },
         cookie: user.cookie,
       });
       expect(res.status).toBe(401);
@@ -36,7 +36,7 @@ describe('profile', () => {
       const newName = uniqueName('renamed');
       const res = await api('/api/me', {
         method: 'PUT',
-        body: { userName: newName, email: user.email, timezone: 'Europe/Stockholm', digestOptIn: false, currentPassword: user.password },
+        body: { userName: newName, email: user.email, timezone: 'Europe/Stockholm', locale: 'en', digestOptIn: false, currentPassword: user.password },
         cookie: user.cookie,
       });
       expect(res.status).toBe(200);
@@ -60,7 +60,7 @@ describe('profile', () => {
 
       const dupName = await api('/api/me', {
         method: 'PUT',
-        body: { userName: other.userName, email: user.email, timezone: TZ, digestOptIn: false, currentPassword: user.password },
+        body: { userName: other.userName, email: user.email, timezone: TZ, locale: 'en', digestOptIn: false, currentPassword: user.password },
         cookie: user.cookie,
       });
       expect(dupName.status).toBe(400);
@@ -68,7 +68,7 @@ describe('profile', () => {
 
       const dupEmail = await api('/api/me', {
         method: 'PUT',
-        body: { userName: user.userName, email: other.email, timezone: TZ, digestOptIn: false, currentPassword: user.password },
+        body: { userName: user.userName, email: other.email, timezone: TZ, locale: 'en', digestOptIn: false, currentPassword: user.password },
         cookie: user.cookie,
       });
       expect(dupEmail.status).toBe(400);
@@ -81,7 +81,7 @@ describe('profile', () => {
 
       const res = await api('/api/me', {
         method: 'PUT',
-        body: { userName: user.userName, email: newEmail, timezone: TZ, digestOptIn: false, currentPassword: user.password },
+        body: { userName: user.userName, email: newEmail, timezone: TZ, locale: 'en', digestOptIn: false, currentPassword: user.password },
         cookie: user.cookie,
       });
       expect(res.status).toBe(200);
@@ -107,13 +107,39 @@ describe('profile', () => {
 
       const res = await api('/api/me', {
         method: 'PUT',
-        body: { userName: user.userName, email: user.email, timezone: TZ, digestOptIn: true, currentPassword: user.password },
+        body: { userName: user.userName, email: user.email, timezone: TZ, locale: 'en', digestOptIn: true, currentPassword: user.password },
         cookie: user.cookie,
       });
       expect(res.status).toBe(200);
       expect(res.body.user.digestOptIn).toBe(true);
       expect((await api('/api/me', { cookie: user.cookie })).body.digestOptIn).toBe(true);
       expect((await getUserRow(user.id))?.digestOptIn).toBe(true);
+    });
+
+    it('persists a locale change and reflects it on GET /api/me', async () => {
+      const user = await createUserWithSession({ timezone: TZ });
+      // New accounts default to English.
+      expect((await api('/api/me', { cookie: user.cookie })).body.locale).toBe('en');
+
+      const res = await api('/api/me', {
+        method: 'PUT',
+        body: { userName: user.userName, email: user.email, timezone: TZ, locale: 'fi', digestOptIn: false, currentPassword: user.password },
+        cookie: user.cookie,
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.user.locale).toBe('fi');
+      expect((await api('/api/me', { cookie: user.cookie })).body.locale).toBe('fi');
+      expect((await getUserRow(user.id))?.locale).toBe('fi');
+    });
+
+    it('422s an unsupported locale value', async () => {
+      const user = await createUserWithSession({ timezone: TZ });
+      const res = await api('/api/me', {
+        method: 'PUT',
+        body: { userName: user.userName, email: user.email, timezone: TZ, locale: 'de', digestOptIn: false, currentPassword: user.password },
+        cookie: user.cookie,
+      });
+      expect(res.status).toBe(422);
     });
   });
 

@@ -120,6 +120,7 @@ export interface TestUser {
   email: string;
   password: string;
   timezone: string;
+  locale: string;
 }
 
 export const TEST_PASSWORD = 'TestPaws123!';
@@ -130,6 +131,7 @@ export async function createUser(
     email: string;
     password: string;
     timezone: string;
+    locale: string;
     emailConfirmed: boolean;
     digestOptIn: boolean;
     lastDigestDate: string | null;
@@ -139,6 +141,7 @@ export async function createUser(
   const email = (overrides.email ?? `${userName}@example.com`).toLowerCase();
   const password = overrides.password ?? TEST_PASSWORD;
   const timezone = overrides.timezone ?? 'Europe/Helsinki';
+  const locale = overrides.locale ?? 'en';
   const now = new Date().toISOString();
   const id = crypto.randomUUID();
   await testDb().insert(users).values({
@@ -149,12 +152,13 @@ export async function createUser(
     passwordHash: bcrypt.hashSync(password, 4),
     emailConfirmed: overrides.emailConfirmed ?? true,
     timezone,
+    locale,
     digestOptIn: overrides.digestOptIn ?? false,
     lastDigestDate: overrides.lastDigestDate ?? null,
     createdAt: now,
     updatedAt: now,
   });
-  return { id, userName, email, password, timezone };
+  return { id, userName, email, password, timezone, locale };
 }
 
 export async function createUserWithSession(

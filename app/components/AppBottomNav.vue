@@ -3,14 +3,14 @@ import { House, UserRound } from '@lucide/vue';
 </script>
 
 <template>
-  <nav class="bottom-nav" aria-label="Main">
+  <nav class="bottom-nav" :aria-label="$t('nav.main')">
     <NuxtLink to="/home" class="nav-item" active-class="is-active">
       <House :size="24" aria-hidden="true" />
-      <span>Home</span>
+      <span>{{ $t('nav.home') }}</span>
     </NuxtLink>
     <NuxtLink to="/profile" class="nav-item" active-class="is-active">
       <UserRound :size="24" aria-hidden="true" />
-      <span>Profile</span>
+      <span>{{ $t('nav.profile') }}</span>
     </NuxtLink>
   </nav>
 </template>

@@ -16,6 +16,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{ changed: [] }>();
 
+const { t } = useI18n();
+
 const userName = ref('');
 const adding = ref(false);
 const errorMessage = ref('');
@@ -46,7 +48,7 @@ async function addCaretaker(): Promise<void> {
       body: parsed.data,
     });
     userName.value = '';
-    announcement.value = `${added.userName} is now helping out! 🐾`;
+    announcement.value = t('caretakers.nowHelping', { name: added.userName });
     emit('changed');
   } catch (error) {
     if (error instanceof FetchError && error.statusCode === 422 && error.data?.errorDetails) {
@@ -54,7 +56,7 @@ async function addCaretaker(): Promise<void> {
     } else if (error instanceof FetchError && error.data?.message) {
       errorMessage.value = error.data.message;
     } else {
-      errorMessage.value = 'Something went wrong. Please try again.';
+      errorMessage.value = t('errors.generic');
     }
   } finally {
     adding.value = false;
@@ -73,14 +75,14 @@ async function confirmRemove(): Promise<void> {
   const target = removingCaretaker.value;
   try {
     await $fetch(`/api/pets/${props.petId}/caretakers/${target.id}`, { method: 'DELETE' });
-    announcement.value = `${target.userName} no longer helps with ${props.petName}.`;
+    announcement.value = t('caretakers.noLongerHelps', { name: target.userName, petName: props.petName });
     removingCaretaker.value = null;
     emit('changed');
   } catch (error) {
     errorMessage.value =
       error instanceof FetchError && error.data?.message
         ? error.data.message
-        : 'Something went wrong. Please try again.';
+        : t('errors.generic');
     removingCaretaker.value = null;
   } finally {
     removeBusy.value = false;
@@ -90,30 +92,28 @@ async function confirmRemove(): Promise<void> {
 
 <template>
   <section class="care-team" aria-labelledby="care-team-title">
-    <h3 id="care-team-title" class="care-team-title">Care Team</h3>
-    <p class="care-team-note">
-      Helpers can see {{ petName }} and check off care tasks, but only you can change them.
-    </p>
+    <h3 id="care-team-title" class="care-team-title">{{ $t('caretakers.careTeam') }}</h3>
+    <p class="care-team-note">{{ $t('caretakers.careTeamNote', { petName }) }}</p>
 
-    <ul v-if="caretakers.length > 0" class="care-team-list" aria-label="Caretakers">
+    <ul v-if="caretakers.length > 0" class="care-team-list" :aria-label="$t('caretakers.caretakers')">
       <li v-for="caretaker in caretakers" :key="caretaker.id" class="care-team-item">
         <span class="care-team-name">{{ caretaker.userName }}</span>
         <button
           type="button"
           class="care-team-remove"
-          :aria-label="`Remove ${caretaker.userName} from the care team`"
+          :aria-label="$t('caretakers.removeFromTeamAria', { name: caretaker.userName })"
           @click="removingCaretaker = caretaker"
         >
-          Remove
+          {{ $t('common.remove') }}
         </button>
       </li>
     </ul>
-    <p v-else class="care-team-empty">No helpers yet — you've got this covered solo. 🐾</p>
+    <p v-else class="care-team-empty">{{ $t('caretakers.noHelpers') }}</p>
 
     <form class="care-team-form" novalidate @submit.prevent="addCaretaker">
       <FormField
         v-slot="{ id, describedBy, invalid }"
-        label="Add a helper by username"
+        :label="$t('caretakers.addHelperLabel')"
         :error="firstError('userName')"
         class="care-team-field"
       >
@@ -122,7 +122,7 @@ async function confirmRemove(): Promise<void> {
           v-model="userName"
           type="text"
           class="form-field-input"
-          placeholder="e.g. helper"
+          :placeholder="$t('caretakers.addHelperPlaceholder')"
           autocomplete="off"
           autocapitalize="none"
           :aria-describedby="describedBy"
@@ -130,7 +130,7 @@ async function confirmRemove(): Promise<void> {
         />
       </FormField>
       <AppButton variant="secondary" type="submit" :disabled="adding" class="care-team-add">
-        {{ adding ? 'Just a moment...' : 'Add Helper' }}
+        {{ adding ? $t('common.justAMoment') : $t('caretakers.addHelper') }}
       </AppButton>
     </form>
 
@@ -139,19 +139,18 @@ async function confirmRemove(): Promise<void> {
 
     <AppModal
       :open="removingCaretaker !== null"
-      :title="`Remove ${removingCaretaker?.userName ?? ''}?`"
+      :title="$t('caretakers.removeTitle', { name: removingCaretaker?.userName ?? '' })"
       @close="removingCaretaker = null"
     >
       <p class="remove-note">
-        {{ removingCaretaker?.userName }} won't see {{ petName }} or log care tasks anymore.
-        Their past care history stays in the diary.
+        {{ $t('caretakers.removeNote', { name: removingCaretaker?.userName ?? '', petName }) }}
       </p>
       <div class="remove-actions">
         <AppButton variant="secondary" :disabled="removeBusy" @click="removingCaretaker = null">
-          Keep helping
+          {{ $t('pets.keepHelping') }}
         </AppButton>
         <AppButton variant="danger" :disabled="removeBusy" @click="confirmRemove">
-          {{ removeBusy ? 'Removing...' : 'Remove' }}
+          {{ removeBusy ? $t('common.removing') : $t('common.remove') }}
         </AppButton>
       </div>
     </AppModal>
@@ -241,6 +240,11 @@ async function confirmRemove(): Promise<void> {
 
 .care-team-add {
   flex: 0 0 auto;
+  /* The username FormField carries a 0.7rem bottom margin under its input;
+     match it so the button's bottom edge lines up with the input's, not with
+     the FormField's lower margin (align-items: flex-end otherwise drops the
+     button below the input by that margin). */
+  margin-bottom: 0.7rem;
 }
 
 .remove-note {

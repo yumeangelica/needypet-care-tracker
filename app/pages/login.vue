@@ -5,6 +5,7 @@ import { FetchError } from 'ofetch';
 definePageMeta({ layout: 'auth' });
 
 const { fetch: refreshSession } = useUserSession();
+const { t } = useI18n();
 
 const userName = ref('');
 const password = ref('');
@@ -28,8 +29,8 @@ async function submit() {
   } catch (error) {
     errorMessage.value =
       error instanceof FetchError && error.statusCode === 401
-        ? "That paw code doesn't match. Try again?"
-        : 'Something went wrong. Please try again.';
+        ? t('auth.wrongPawCode')
+        : t('errors.generic');
   } finally {
     submitting.value = false;
   }
@@ -40,11 +41,11 @@ async function submit() {
   <div class="login-register-container auth-form-card">
     <div class="paw-header-container auth-card-header">
       <PawPrint aria-hidden="true" />
-      <h1 class="page-title title-underline">Welcome Back</h1>
+      <h1 class="page-title title-underline">{{ $t('auth.welcomeBack') }}</h1>
     </div>
-    <p class="auth-subtitle">Your furry friends missed you 🐾</p>
+    <p class="auth-subtitle">{{ $t('auth.loginSubtitle') }}</p>
     <form class="auth-form" novalidate @submit.prevent="submit">
-      <label class="form-label" for="login-username">Username</label>
+      <label class="form-label" for="login-username">{{ $t('auth.username') }}</label>
       <div class="auth-field">
         <input
           id="login-username"
@@ -52,11 +53,11 @@ async function submit() {
           type="text"
           class="auth-field-input"
           autocomplete="username"
-          placeholder="Your username"
+          :placeholder="$t('auth.usernamePlaceholder')"
           required
         />
       </div>
-      <label class="form-label" for="login-password">Password</label>
+      <label class="form-label" for="login-password">{{ $t('auth.password') }}</label>
       <div class="auth-field">
         <input
           id="login-password"
@@ -64,13 +65,13 @@ async function submit() {
           :type="showPassword ? 'text' : 'password'"
           class="auth-field-input"
           autocomplete="current-password"
-          placeholder="Your secret paw code"
+          :placeholder="$t('auth.loginPasswordPlaceholder')"
           required
         />
         <button
           type="button"
           class="show-password-button"
-          :aria-label="showPassword ? 'Hide password' : 'Show password'"
+          :aria-label="showPassword ? $t('auth.hidePassword') : $t('auth.showPassword')"
           :aria-pressed="showPassword"
           @click="showPassword = !showPassword"
         >
@@ -81,16 +82,16 @@ async function submit() {
       <p v-if="errorMessage" class="custom-error-message" role="alert">{{ errorMessage }}</p>
       <div class="auth-action-row">
         <button type="submit" class="action-button primary-action-button" :disabled="submitting">
-          {{ submitting ? 'Just a moment...' : 'Log In' }}
+          {{ submitting ? $t('common.justAMoment') : $t('auth.logIn') }}
         </button>
       </div>
       <NuxtLink to="/forgot-password" class="auth-secondary-link">
-        Forgot your paw code?
+        {{ $t('auth.forgotPawCode') }}
       </NuxtLink>
       <NuxtLink to="/register" class="auth-secondary-link">
-        New here? Join the Pack instead
+        {{ $t('auth.loginToRegister') }}
       </NuxtLink>
-      <NuxtLink to="/" class="auth-secondary-link">Back to start</NuxtLink>
+      <NuxtLink to="/" class="auth-secondary-link">{{ $t('auth.backToStart') }}</NuxtLink>
     </form>
   </div>
 </template>

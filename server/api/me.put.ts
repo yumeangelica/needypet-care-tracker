@@ -43,6 +43,7 @@ export default defineEventHandler(async (event) => {
       userName: input.userName,
       email,
       timezone: input.timezone,
+      locale: input.locale,
       digestOptIn: input.digestOptIn,
       ...(confirm
         ? {
@@ -63,7 +64,9 @@ export default defineEventHandler(async (event) => {
   }
 
   // Re-issue the session so its cached userName stays fresh.
-  await setUserSession(event, { user: { id: updated.id, userName: updated.userName } });
+  await setUserSession(event, {
+    user: { id: updated.id, userName: updated.userName, locale: updated.locale as 'en' | 'fi' },
+  });
 
   return { message: 'User updated successfully', user: toPublicUser(updated) };
 });

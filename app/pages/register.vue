@@ -7,6 +7,7 @@ import { PASSWORD_RULES, registerSchema } from '#shared/schemas/user';
 definePageMeta({ layout: 'auth' });
 
 const { fetch: refreshSession } = useUserSession();
+const { t } = useI18n();
 
 const userName = ref('');
 const email = ref('');
@@ -58,7 +59,7 @@ async function submit() {
     } else if (error instanceof FetchError && error.data?.message) {
       errorMessage.value = error.data.message;
     } else {
-      errorMessage.value = 'Something went wrong. Please try again.';
+      errorMessage.value = t('errors.generic');
     }
   } finally {
     submitting.value = false;
@@ -70,11 +71,11 @@ async function submit() {
   <div class="login-register-container auth-form-card">
     <div class="paw-header-container auth-card-header">
       <PawPrint aria-hidden="true" />
-      <h1 class="page-title title-underline">Join the Pack</h1>
+      <h1 class="page-title title-underline">{{ $t('auth.joinThePack') }}</h1>
     </div>
-    <p class="auth-subtitle">Make an account and start caring together 🐾</p>
+    <p class="auth-subtitle">{{ $t('auth.registerSubtitle') }}</p>
     <form class="auth-form auth-register-form" novalidate @submit.prevent="submit">
-      <label class="form-label" for="register-username">Username</label>
+      <label class="form-label" for="register-username">{{ $t('auth.username') }}</label>
       <div class="auth-field">
         <input
           id="register-username"
@@ -82,7 +83,7 @@ async function submit() {
           type="text"
           class="auth-field-input"
           autocomplete="username"
-          placeholder="Pick a username"
+          :placeholder="$t('auth.registerUsernamePlaceholder')"
           :aria-invalid="firstError('userName') ? true : undefined"
           :aria-describedby="firstError('userName') ? 'register-username-error' : undefined"
           required
@@ -92,7 +93,7 @@ async function submit() {
         {{ firstError('userName') }}
       </p>
 
-      <label class="form-label" for="register-email">Email</label>
+      <label class="form-label" for="register-email">{{ $t('auth.email') }}</label>
       <div class="auth-field">
         <input
           id="register-email"
@@ -100,7 +101,7 @@ async function submit() {
           type="email"
           class="auth-field-input"
           autocomplete="email"
-          placeholder="you@example.com"
+          :placeholder="$t('auth.emailPlaceholder')"
           :aria-invalid="firstError('email') ? true : undefined"
           :aria-describedby="firstError('email') ? 'register-email-error' : undefined"
           required
@@ -110,7 +111,7 @@ async function submit() {
         {{ firstError('email') }}
       </p>
 
-      <label class="form-label" for="register-password">Password</label>
+      <label class="form-label" for="register-password">{{ $t('auth.password') }}</label>
       <div class="auth-field">
         <input
           id="register-password"
@@ -118,7 +119,7 @@ async function submit() {
           :type="showPassword ? 'text' : 'password'"
           class="auth-field-input"
           autocomplete="new-password"
-          placeholder="Create a secret paw code"
+          :placeholder="$t('auth.registerPasswordPlaceholder')"
           :aria-invalid="firstError('newPassword') ? true : undefined"
           aria-describedby="register-password-rules"
           required
@@ -126,7 +127,7 @@ async function submit() {
         <button
           type="button"
           class="show-password-button"
-          :aria-label="showPassword ? 'Hide password' : 'Show password'"
+          :aria-label="showPassword ? $t('auth.hidePassword') : $t('auth.showPassword')"
           :aria-pressed="showPassword"
           @click="showPassword = !showPassword"
         >
@@ -135,7 +136,7 @@ async function submit() {
         </button>
       </div>
       <div id="register-password-rules" class="strong-password-note">
-        <p class="rules-title">A strong paw code has:</p>
+        <p class="rules-title">{{ $t('auth.strongPawCodeHas') }}</p>
         <ul>
           <li v-for="check in passwordChecks" :key="check.id" :class="{ valid: check.valid }">
             {{ check.label }}
@@ -146,13 +147,11 @@ async function submit() {
         {{ firstError('newPassword') }}
       </p>
 
-      <span class="form-label">Timezone</span>
+      <span class="form-label">{{ $t('auth.timezone') }}</span>
       <div class="auth-field">
         <span class="auth-field-input auth-field-value">{{ timezone }}</span>
       </div>
-      <p class="auth-field-hint">
-        Detected from your device - it keeps daily care tasks on your local day.
-      </p>
+      <p class="auth-field-hint">{{ $t('auth.timezoneHint') }}</p>
 
       <p v-if="errorMessage" class="custom-error-message" role="alert">{{ errorMessage }}</p>
       <div class="auth-action-row">
@@ -161,11 +160,11 @@ async function submit() {
           class="action-button primary-action-button auth-action-button"
           :disabled="submitting"
         >
-          {{ submitting ? 'Just a moment...' : 'Join the Pack' }}
+          {{ submitting ? $t('common.justAMoment') : $t('auth.joinThePack') }}
         </button>
       </div>
       <NuxtLink to="/login" class="auth-secondary-link">
-        Already family? Welcome back - log in
+        {{ $t('auth.registerToLogin') }}
       </NuxtLink>
     </form>
   </div>

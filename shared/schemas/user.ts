@@ -41,6 +41,8 @@ export const timezoneSchema = z
   .string()
   .refine(isSupportedTimeZone, { message: 'Invalid timezone' });
 
+export const localeSchema = z.enum(['en', 'fi']);
+
 export const registerSchema = z.object({
   userName: userNameSchema,
   email: emailSchema,
@@ -62,6 +64,7 @@ export const profileUpdateSchema = z.object({
   userName: userNameSchema,
   email: emailSchema,
   timezone: timezoneSchema,
+  locale: localeSchema,
   digestOptIn: z.boolean(),
   currentPassword: z.string().min(1, 'Current password is required'),
 });

@@ -32,6 +32,7 @@ const emit = defineEmits<{
 }>();
 
 const { user: sessionUser } = useUserSession();
+const { t } = useI18n();
 const currentUserId = computed(() => sessionUser.value?.id ?? null);
 
 const measurementLabel = computed(() => {
@@ -97,13 +98,13 @@ async function markAllDone(): Promise<void> {
         ...measurement,
       },
     });
-    announcement.value = `${props.need.category} marked done. Purrfectly done!`;
+    announcement.value = t('needs.markedDone', { category: props.need.category });
     emit('recorded', props.need);
   } catch (error) {
     completeError.value =
       error instanceof FetchError && error.data?.message
         ? error.data.message
-        : 'Something went wrong. Please try again.';
+        : t('errors.generic');
   } finally {
     completing.value = false;
   }
@@ -119,13 +120,13 @@ const removeBusy = ref(false);
 
 function onPartialSaved(): void {
   logFormOpen.value = false;
-  announcement.value = `Care logged for ${props.need.category}.`;
+  announcement.value = t('needs.careLogged', { category: props.need.category });
   emit('recorded', props.need);
 }
 
 function onRecordEdited(): void {
   editingRecord.value = null;
-  announcement.value = `Care log entry updated.`;
+  announcement.value = t('needs.careLogEntryUpdated');
   emit('recorded', props.need);
 }
 
@@ -141,13 +142,13 @@ async function confirmRemoveRecord(): Promise<void> {
       { method: 'DELETE' },
     );
     removingRecord.value = null;
-    announcement.value = `Care log entry removed.`;
+    announcement.value = t('needs.careLogEntryRemoved');
     emit('recorded', props.need);
   } catch (error) {
     completeError.value =
       error instanceof FetchError && error.data?.message
         ? error.data.message
-        : 'Something went wrong. Please try again.';
+        : t('errors.generic');
     removingRecord.value = null;
   } finally {
     removeBusy.value = false;
@@ -166,23 +167,23 @@ async function confirmRemoveRecord(): Promise<void> {
 
     <p v-if="need.completed" class="need-status need-status-done">
       <CircleCheck :size="16" aria-hidden="true" />
-      Purrfectly done!
+      {{ $t('needs.donePraise') }}
     </p>
     <!-- Archived copies are frozen history; the pause note only makes sense
          on a live (non-archived) need. -->
     <p v-else-if="!need.isActive && !need.archived" class="need-status need-status-paused">
       <CirclePause :size="16" aria-hidden="true" />
-      Paused — won't continue tomorrow
+      {{ $t('needs.pausedNote') }}
     </p>
 
     <p v-if="!need.completed && loggedValue > 0" class="need-progress">
-      {{ loggedValue }} / {{ targetValue }} {{ unitLabel }} logged
+      {{ $t('needs.progressLogged', { logged: loggedValue, target: targetValue, unit: unitLabel }) }}
     </p>
 
     <div v-if="canComplete" class="need-complete-row">
       <AppButton variant="primary" :disabled="completing" @click="markAllDone">
         <PawPrint :size="18" aria-hidden="true" />
-        {{ completing ? 'Just a moment...' : 'All Done!' }}
+        {{ completing ? $t('common.justAMoment') : $t('needs.allDone') }}
       </AppButton>
       <AppButton
         variant="secondary"
@@ -191,7 +192,7 @@ async function confirmRemoveRecord(): Promise<void> {
         @click="logFormOpen = !logFormOpen"
       >
         <CirclePlus :size="18" aria-hidden="true" />
-        Log Some
+        {{ $t('needs.logSome') }}
       </AppButton>
     </div>
 
@@ -216,7 +217,7 @@ async function confirmRemoveRecord(): Promise<void> {
         @click="logOpen = !logOpen"
       >
         <NotebookPen :size="14" aria-hidden="true" />
-        Care log ({{ need.records.length }})
+        {{ $t('needs.careLogCount', { count: need.records.length }) }}
       </button>
       <CareRecordList
         v-if="logOpen"
@@ -240,11 +241,11 @@ async function confirmRemoveRecord(): Promise<void> {
       >
         <CirclePlay v-if="!need.isActive" :size="16" aria-hidden="true" />
         <CirclePause v-else :size="16" aria-hidden="true" />
-        {{ need.isActive ? 'Pause' : 'Resume' }}
+        {{ need.isActive ? $t('needs.pause') : $t('needs.resume') }}
       </button>
       <button v-if="canModify" type="button" class="need-action-button" @click="emit('edit', need)">
         <Pencil :size="16" aria-hidden="true" />
-        Edit
+        {{ $t('common.edit') }}
       </button>
       <button
         type="button"
@@ -252,11 +253,11 @@ async function confirmRemoveRecord(): Promise<void> {
         @click="emit('remove', need)"
       >
         <Trash2 :size="16" aria-hidden="true" />
-        Delete
+        {{ $t('common.delete') }}
       </button>
     </div>
 
-    <AppModal :open="editingRecord !== null" title="Edit Care Log Entry" @close="editingRecord = null">
+    <AppModal :open="editingRecord !== null" :title="$t('needs.editCareLogEntry')" @close="editingRecord = null">
       <CareRecordForm
         v-if="editingRecord"
         :pet-id="need.petId"
@@ -268,17 +269,16 @@ async function confirmRemoveRecord(): Promise<void> {
       />
     </AppModal>
 
-    <AppModal :open="removingRecord !== null" title="Remove this entry?" @close="removingRecord = null">
+    <AppModal :open="removingRecord !== null" :title="$t('needs.removeEntryTitle')" @close="removingRecord = null">
       <p class="remove-note">
-        The {{ removingRecord ? getMeasurementValue(removingRecord) : '' }} {{ unitLabel }} entry
-        will be removed. If the total drops below the goal, the task opens up again.
+        {{ $t('needs.removeEntryNote', { value: removingRecord ? getMeasurementValue(removingRecord) : '', unit: unitLabel }) }}
       </p>
       <div class="remove-actions">
         <AppButton variant="secondary" :disabled="removeBusy" @click="removingRecord = null">
-          Keep it
+          {{ $t('common.keepIt') }}
         </AppButton>
         <AppButton variant="danger" :disabled="removeBusy" @click="confirmRemoveRecord">
-          {{ removeBusy ? 'Removing...' : 'Remove' }}
+          {{ removeBusy ? $t('common.removing') : $t('common.remove') }}
         </AppButton>
       </div>
     </AppModal>
