@@ -296,15 +296,15 @@ async function confirmDelete(): Promise<void> {
         <p v-if="passwordSuccess" class="custom-valid-message" role="status">{{ passwordSuccess }}</p>
 
         <div class="form-button-group profile-actions">
-          <AppButton v-if="!editingProfile" variant="primary" @click="openProfileForm">
+          <AppButton v-if="!editingProfile" class="profile-action" variant="primary" @click="openProfileForm">
             <UserPen :size="18" aria-hidden="true" />
             {{ $t('profile.editProfile') }}
           </AppButton>
-          <AppButton v-if="!changingPassword" variant="primary" @click="openPasswordForm">
+          <AppButton v-if="!changingPassword" class="profile-action" variant="primary" @click="openPasswordForm">
             <KeyRound :size="18" aria-hidden="true" />
             {{ $t('profile.changePawCode') }}
           </AppButton>
-          <AppButton variant="secondary" :disabled="loggingOut" @click="logout">
+          <AppButton class="profile-action profile-action-logout" variant="secondary" :disabled="loggingOut" @click="logout">
             <LogOut :size="18" aria-hidden="true" />
             {{ loggingOut ? $t('common.justAMoment') : $t('profile.logOut') }}
           </AppButton>
@@ -572,7 +572,34 @@ async function confirmDelete(): Promise<void> {
 }
 
 .profile-actions {
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 0.75rem;
+}
+
+.profile-actions :deep(.profile-action) {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: var(--field-min-height);
+  padding: 0.75rem 0.9rem;
+  white-space: normal;
+}
+
+.profile-actions :deep(.profile-action svg) {
+  flex: 0 0 auto;
+}
+
+@media (min-width: 430px) {
+  .profile-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .profile-actions :deep(.profile-action-logout) {
+    grid-column: 1 / -1;
+  }
 }
 
 .profile-section {
