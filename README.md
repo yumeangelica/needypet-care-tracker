@@ -30,37 +30,8 @@ Drizzle ORM · SQLite locally / Postgres (Supabase) in production · Bun.
 - Installable PWA: web manifest + Workbox service worker (auto-updating), maskable
   icons, and an offline fallback page — API responses are never cached
   (`documentation/deployment.md`)
-
-## Setup
-
-```bash
-bun install
-# Create a .env with at least NUXT_SESSION_PASSWORD (32+ chars).
-# See the environment variables table below for the full list.
-bun run db:seed        # creates + seeds .data/needypet.sqlite
-```
-
-The seed prints demo credentials:
-
-```
-owner:     demo   / DemoPaws123!
-caretaker: helper / HelperPaws123!
-```
-
-## Development
-
-```bash
-bun run dev            # http://localhost:3000
-bun run test           # unit tests + API integration tests
-bun run test:unit      # vitest unit tests (shared domain utilities)
-bun run test:integration # endpoint tests over real HTTP (builds the app once,
-                       # boots one Nitro server on a throwaway SQLite database)
-bun run typecheck      # vue-tsc via nuxt typecheck
-bun run db:generate    # regenerate sqlite migrations after schema changes
-bun run db:generate:pg # regenerate the paired Postgres migrations
-bun run db:seed        # reset + reseed the local database
-bun run db:import      # import a legacy JSON bundle (see migration.md)
-```
+- English + Finnish UI (vue-i18n), language stored on the user profile and
+  switchable from Profile — see *Internationalization* below
 
 ## Environment variables
 
@@ -96,6 +67,31 @@ Full production setup (build, migrations, storage, digest cron) lives in
 - `documentation/` — `deployment.md` (production environment, storage, digest
   cron, PWA), `postgres.md` (production database path), `migration.md` (legacy
   import contract), `auth-audit.md` (auth hardening notes)
+
+## Internationalization
+
+The UI ships in **English (default) and Finnish**, using `vue-i18n` directly as a
+Nuxt plugin (`app/plugins/i18n.ts`) rather than `@nuxtjs/i18n` — this is an auth
+app with no need for per-locale routing or SEO, and no language ever appears in
+the URL. Messages live in `app/i18n/en.ts` and `app/i18n/fi.ts` (namespaced:
+`common`, `nav`, `auth`, `pets`, `needs`, `records`, `caretakers`, `profile`,
+`stats`, `offline`, `errors`); the Finnish copy is a **transcreation**, keeping
+the warm 🐾 tone rather than a literal translation. Finnish plural rules and named
+interpolation are handled by vue-i18n (e.g. task counts, care-team announcements).
+
+- The active language is stored on the user's profile (`users.locale`, default
+  `'en'`) and changed from the **Profile** page. There is no browser-language
+  autodetect.
+- The SSR i18n plugin reads the locale from the session (cached on the session
+  payload), so the server and client render the same language with no
+  hydration-time flicker. Signed-out pages (landing / login / register) are
+  always English.
+- `<html lang>` and the in-app `Intl.DateTimeFormat` date/weekday labels follow
+  the active locale; the PWA manifest `lang` stays `en` (it is generated once at
+  build time). The daily digest email is localized to the recipient's locale;
+  confirmation/reset emails stay English.
+- A unit test (`tests/unit/i18n.spec.ts`) enforces en/fi key parity, so a new key
+  added to one locale but not the other fails the suite.
 
 ## Domain rules worth knowing
 

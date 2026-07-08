@@ -57,7 +57,7 @@ function onBackdropClick(event: MouseEvent): void {
     <div class="app-modal-content">
       <header class="app-modal-band">
         <h2 :id="titleId" class="app-modal-title">{{ title }}</h2>
-        <button type="button" class="app-modal-close" aria-label="Close dialog" @click="emit('close')">
+        <button type="button" class="app-modal-close" :aria-label="$t('nav.closeDialog')" @click="emit('close')">
           <X :size="20" aria-hidden="true" />
         </button>
       </header>

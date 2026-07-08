@@ -30,3 +30,6 @@ coverage
 .env.*
 
 .todo.md
+
+# Personal developer run/setup notes (not for the public repo)
+DEV_NOTES.md

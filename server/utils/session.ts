@@ -28,6 +28,7 @@ export function toPublicUser(row: UserRow) {
     email: row.email,
     emailConfirmed: row.emailConfirmed,
     timezone: row.timezone,
+    locale: row.locale as 'en' | 'fi',
     digestOptIn: row.digestOptIn,
   };
 }

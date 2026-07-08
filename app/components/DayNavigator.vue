@@ -9,15 +9,17 @@ const props = defineProps<{
 
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
 
+const { t, locale } = useI18n();
+
 const isToday = computed(() => props.modelValue === props.ownerToday);
 
 // Date-only strings are formatted through UTC so the label never shifts
 // through the browser's timezone.
 const dateLabel = computed(() => {
   if (isToday.value) {
-    return 'Today';
+    return t('common.today');
   }
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale.value, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -31,21 +33,21 @@ function changeDay(days: number): void {
 </script>
 
 <template>
-  <nav class="day-navigator" aria-label="Care day">
-    <button type="button" class="day-nav-button" aria-label="Previous day" @click="changeDay(-1)">
+  <nav class="day-navigator" :aria-label="$t('records.careDay')">
+    <button type="button" class="day-nav-button" :aria-label="$t('records.previousDay')" @click="changeDay(-1)">
       <ChevronLeft :size="18" aria-hidden="true" />
-      <span class="day-nav-label">Previous</span>
+      <span class="day-nav-label">{{ $t('common.previous') }}</span>
     </button>
 
     <div class="day-nav-current">
       <p class="day-nav-date" aria-live="polite">{{ dateLabel }}</p>
       <button v-if="!isToday" type="button" class="day-nav-today" @click="emit('update:modelValue', ownerToday)">
-        Today
+        {{ $t('common.today') }}
       </button>
     </div>
 
-    <button type="button" class="day-nav-button" aria-label="Next day" @click="changeDay(1)">
-      <span class="day-nav-label">Next</span>
+    <button type="button" class="day-nav-button" :aria-label="$t('records.nextDay')" @click="changeDay(1)">
+      <span class="day-nav-label">{{ $t('common.next') }}</span>
       <ChevronRight :size="18" aria-hidden="true" />
     </button>
   </nav>

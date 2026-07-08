@@ -7,6 +7,7 @@ import { PASSWORD_RULES, resetPasswordSchema } from '#shared/schemas/user';
 definePageMeta({ layout: 'auth' });
 
 const route = useRoute();
+const { t } = useI18n();
 const token = computed(() => (typeof route.query.token === 'string' ? route.query.token : ''));
 
 const newPassword = ref('');
@@ -34,7 +35,7 @@ async function submit(): Promise<void> {
   if (!parsed.success) {
     const flat = z.flattenError(parsed.error).fieldErrors as Record<string, string[]>;
     if (flat.token) {
-      errorMessage.value = 'This reset link is missing its token.';
+      errorMessage.value = t('errors.resetTokenMissing');
     }
     fieldErrors.value = flat;
     return;
@@ -53,7 +54,7 @@ async function submit(): Promise<void> {
     } else if (error instanceof FetchError && error.data?.message) {
       errorMessage.value = error.data.message;
     } else {
-      errorMessage.value = 'Something went wrong. Please try again.';
+      errorMessage.value = t('errors.generic');
     }
   } finally {
     submitting.value = false;
@@ -65,18 +66,18 @@ async function submit(): Promise<void> {
   <div class="login-register-container auth-form-card">
     <div class="paw-header-container auth-card-header">
       <PawPrint aria-hidden="true" />
-      <h1 class="page-title title-underline">Set a New Paw Code</h1>
+      <h1 class="page-title title-underline">{{ $t('auth.resetTitle') }}</h1>
     </div>
 
     <template v-if="successMessage">
       <p class="custom-valid-message" role="status">{{ successMessage }}</p>
       <div class="auth-action-row">
-        <NuxtLink to="/login" class="action-button primary-action-button">Sign In</NuxtLink>
+        <NuxtLink to="/login" class="action-button primary-action-button">{{ $t('auth.signIn') }}</NuxtLink>
       </div>
     </template>
 
     <form v-else class="auth-form" novalidate @submit.prevent="submit">
-      <label class="form-label" for="reset-password">New password</label>
+      <label class="form-label" for="reset-password">{{ $t('auth.newPassword') }}</label>
       <div class="auth-field">
         <input
           id="reset-password"
@@ -84,7 +85,7 @@ async function submit(): Promise<void> {
           :type="showPassword ? 'text' : 'password'"
           class="auth-field-input"
           autocomplete="new-password"
-          placeholder="Create a new secret paw code"
+          :placeholder="$t('auth.newPasswordPlaceholder')"
           :aria-invalid="fieldErrors.newPassword ? true : undefined"
           :aria-describedby="fieldErrors.newPassword ? 'reset-password-error' : undefined"
           required
@@ -92,7 +93,7 @@ async function submit(): Promise<void> {
         <button
           type="button"
           class="show-password-button"
-          :aria-label="showPassword ? 'Hide password' : 'Show password'"
+          :aria-label="showPassword ? $t('auth.hidePassword') : $t('auth.showPassword')"
           :aria-pressed="showPassword"
           @click="showPassword = !showPassword"
         >
@@ -110,7 +111,7 @@ async function submit(): Promise<void> {
       </p>
 
       <div class="strong-password-note">
-        <p class="rules-title">A strong paw code has:</p>
+        <p class="rules-title">{{ $t('auth.strongPawCodeHas') }}</p>
         <ul>
           <li v-for="checkItem in passwordChecks" :key="checkItem.id" :class="{ valid: checkItem.valid }">
             {{ checkItem.label }}
@@ -122,12 +123,12 @@ async function submit(): Promise<void> {
 
       <div class="auth-action-row">
         <button type="submit" class="action-button primary-action-button" :disabled="submitting">
-          {{ submitting ? 'Just a moment...' : 'Update Paw Code' }}
+          {{ submitting ? $t('common.justAMoment') : $t('auth.updatePawCode') }}
         </button>
       </div>
     </form>
 
-    <NuxtLink to="/login" class="auth-secondary-link">Back to sign in</NuxtLink>
+    <NuxtLink to="/login" class="auth-secondary-link">{{ $t('auth.backToSignIn') }}</NuxtLink>
   </div>
 </template>
 

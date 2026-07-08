@@ -8,11 +8,12 @@ import {
   passwordChangeSchema,
   profileUpdateSchema,
 } from '#shared/schemas/user';
-import type { PublicUser } from '#shared/types/domain';
+import type { Locale, PublicUser } from '#shared/types/domain';
 
 definePageMeta({ middleware: 'auth' });
 
 const { clear: clearSession, fetch: refreshSession } = useUserSession();
+const { t, locale: activeLocale } = useI18n();
 
 const { data: me, status, refresh } = await useFetch<PublicUser>('/api/me');
 
@@ -57,7 +58,7 @@ async function resendConfirmation(): Promise<void> {
     resendError.value =
       error instanceof FetchError && error.data?.message
         ? error.data.message
-        : 'Something went wrong. Please try again.';
+        : t('errors.generic');
   } finally {
     resendBusy.value = false;
   }
@@ -69,6 +70,7 @@ const editingProfile = ref(false);
 const profileUserName = ref('');
 const profileEmail = ref('');
 const profileTimezone = ref('');
+const profileLocale = ref<Locale>('en');
 const profileDigestOptIn = ref(false);
 const profilePassword = ref('');
 const profileSaving = ref(false);
@@ -82,6 +84,7 @@ function openProfileForm(): void {
   profileUserName.value = me.value?.userName ?? '';
   profileEmail.value = me.value?.email ?? '';
   profileTimezone.value = me.value?.timezone ?? '';
+  profileLocale.value = me.value?.locale ?? 'en';
   profileDigestOptIn.value = me.value?.digestOptIn ?? false;
   profilePassword.value = '';
   profileFieldErrors.value = {};
@@ -107,6 +110,7 @@ async function saveProfile() {
     userName: profileUserName.value.trim(),
     email: profileEmail.value.trim(),
     timezone: profileTimezone.value,
+    locale: profileLocale.value,
     digestOptIn: profileDigestOptIn.value,
     currentPassword: profilePassword.value,
   };
@@ -120,17 +124,20 @@ async function saveProfile() {
   try {
     await $fetch('/api/me', { method: 'PUT', body: parsed.data });
     await Promise.all([refresh(), refreshSession()]);
+    // Flip the live UI language only after the refreshes resolve, so the
+    // session and the loaded profile agree on the new locale.
+    activeLocale.value = profileLocale.value;
     editingProfile.value = false;
-    profileSuccess.value = 'Profile updated! 🐾';
+    profileSuccess.value = t('profile.profileUpdated');
   } catch (error) {
     if (error instanceof FetchError && error.statusCode === 422 && error.data?.errorDetails) {
       profileFieldErrors.value = error.data.errorDetails;
     } else if (error instanceof FetchError && error.statusCode === 401) {
-      profileFieldErrors.value = { currentPassword: ['Invalid current password'] };
+      profileFieldErrors.value = { currentPassword: [t('errors.invalidCurrentPassword')] };
     } else if (error instanceof FetchError && error.data?.message) {
       profileError.value = error.data.message;
     } else {
-      profileError.value = 'Something went wrong. Please try again.';
+      profileError.value = t('errors.generic');
     }
   } finally {
     profileSaving.value = false;
@@ -189,16 +196,16 @@ async function savePassword() {
     changingPassword.value = false;
     currentPassword.value = '';
     newPassword.value = '';
-    passwordSuccess.value = 'Paw code updated! 🐾';
+    passwordSuccess.value = t('profile.pawCodeUpdated');
   } catch (error) {
     if (error instanceof FetchError && error.statusCode === 422 && error.data?.errorDetails) {
       passwordFieldErrors.value = error.data.errorDetails;
     } else if (error instanceof FetchError && error.statusCode === 401) {
-      passwordFieldErrors.value = { currentPassword: ['Invalid current password'] };
+      passwordFieldErrors.value = { currentPassword: [t('errors.invalidCurrentPassword')] };
     } else if (error instanceof FetchError && error.data?.message) {
       passwordError.value = error.data.message;
     } else {
-      passwordError.value = 'Something went wrong. Please try again.';
+      passwordError.value = t('errors.generic');
     }
   } finally {
     passwordSaving.value = false;
@@ -227,7 +234,7 @@ async function confirmDelete(): Promise<void> {
   const parsed = accountDeleteSchema.safeParse({ currentPassword: deletePassword.value });
   if (!parsed.success) {
     deleteError.value = z.flattenError(parsed.error).fieldErrors.currentPassword?.[0]
-      ?? 'Current password is required';
+      ?? t('errors.currentPasswordRequired');
     return;
   }
 
@@ -238,11 +245,11 @@ async function confirmDelete(): Promise<void> {
     await navigateTo('/');
   } catch (error) {
     if (error instanceof FetchError && error.statusCode === 401) {
-      deleteError.value = 'Invalid current password';
+      deleteError.value = t('errors.invalidCurrentPassword');
     } else if (error instanceof FetchError && error.data?.message) {
       deleteError.value = error.data.message;
     } else {
-      deleteError.value = 'Something went wrong. Please try again.';
+      deleteError.value = t('errors.generic');
     }
   } finally {
     deleteBusy.value = false;
@@ -252,30 +259,32 @@ async function confirmDelete(): Promise<void> {
 
 <template>
   <div class="content-wrapper">
-    <DuoCard class="account-panel" title="My Profile">
+    <DuoCard class="account-panel" :title="$t('profile.myProfile')">
       <div v-if="status === 'pending'" class="state-note" aria-live="polite">
-        <p>Just a moment...</p>
+        <p>{{ $t('common.justAMoment') }}</p>
       </div>
 
       <template v-else-if="me">
         <dl class="profile-facts">
-          <dt>Username</dt>
+          <dt>{{ $t('profile.username') }}</dt>
           <dd>{{ me.userName }}</dd>
-          <dt>Email</dt>
+          <dt>{{ $t('profile.email') }}</dt>
           <dd class="email-fact">
             <span>{{ me.email }}</span>
-            <span v-if="me.emailConfirmed" class="email-badge email-badge-confirmed">Confirmed</span>
-            <span v-else class="email-badge email-badge-pending">Waiting for confirmation</span>
+            <span v-if="me.emailConfirmed" class="email-badge email-badge-confirmed">{{ $t('profile.confirmed') }}</span>
+            <span v-else class="email-badge email-badge-pending">{{ $t('profile.waitingForConfirmation') }}</span>
           </dd>
-          <dt>Timezone</dt>
+          <dt>{{ $t('profile.timezone') }}</dt>
           <dd>{{ me.timezone }}</dd>
-          <dt>Daily reminders</dt>
-          <dd>{{ me.digestOptIn ? 'On 🐾' : 'Off' }}</dd>
+          <dt>{{ $t('profile.language') }}</dt>
+          <dd>{{ me.locale === 'fi' ? 'Suomi' : 'English' }}</dd>
+          <dt>{{ $t('profile.dailyReminders') }}</dt>
+          <dd>{{ me.digestOptIn ? $t('profile.remindersOn') : $t('profile.remindersOff') }}</dd>
         </dl>
 
         <div v-if="!me.emailConfirmed" class="resend-row">
           <AppButton variant="secondary" :disabled="resendBusy" @click="resendConfirmation">
-            {{ resendBusy ? 'Just a moment...' : 'Resend Confirmation Email' }}
+            {{ resendBusy ? $t('common.justAMoment') : $t('profile.resendConfirmation') }}
           </AppButton>
         </div>
         <p v-if="resendMessage" class="custom-valid-message" role="status" aria-live="polite">
@@ -289,22 +298,22 @@ async function confirmDelete(): Promise<void> {
         <div class="form-button-group profile-actions">
           <AppButton v-if="!editingProfile" variant="primary" @click="openProfileForm">
             <UserPen :size="18" aria-hidden="true" />
-            Edit Profile
+            {{ $t('profile.editProfile') }}
           </AppButton>
           <AppButton v-if="!changingPassword" variant="primary" @click="openPasswordForm">
             <KeyRound :size="18" aria-hidden="true" />
-            Change Paw Code
+            {{ $t('profile.changePawCode') }}
           </AppButton>
           <AppButton variant="secondary" :disabled="loggingOut" @click="logout">
             <LogOut :size="18" aria-hidden="true" />
-            {{ loggingOut ? 'Just a moment...' : 'Log Out' }}
+            {{ loggingOut ? $t('common.justAMoment') : $t('profile.logOut') }}
           </AppButton>
         </div>
 
         <section v-if="editingProfile" class="profile-section" aria-labelledby="edit-profile-title">
-          <h3 id="edit-profile-title" class="page-title-sm title-underline">Edit Profile</h3>
+          <h3 id="edit-profile-title" class="page-title-sm title-underline">{{ $t('profile.editProfile') }}</h3>
           <form class="profile-form" novalidate @submit.prevent="saveProfile">
-            <FormField v-slot="{ id, describedBy, invalid }" label="Username" :error="profileFieldError('userName')">
+            <FormField v-slot="{ id, describedBy, invalid }" :label="$t('profile.username')" :error="profileFieldError('userName')">
               <input
                 :id
                 v-model="profileUserName"
@@ -317,7 +326,7 @@ async function confirmDelete(): Promise<void> {
               />
             </FormField>
 
-            <FormField v-slot="{ id, describedBy, invalid }" label="Email" :error="profileFieldError('email')">
+            <FormField v-slot="{ id, describedBy, invalid }" :label="$t('profile.email')" :error="profileFieldError('email')">
               <input
                 :id
                 v-model="profileEmail"
@@ -332,9 +341,9 @@ async function confirmDelete(): Promise<void> {
 
             <FormField
               v-slot="{ id, describedBy, invalid }"
-              label="Timezone"
+              :label="$t('profile.timezone')"
               :error="profileFieldError('timezone')"
-              hint="Changing your timezone moves your pets' care day — tasks roll over on your new local midnight."
+              :hint="$t('profile.timezoneHint')"
             >
               <select
                 :id
@@ -347,6 +356,24 @@ async function confirmDelete(): Promise<void> {
               </select>
             </FormField>
 
+            <FormField
+              v-slot="{ id, describedBy, invalid }"
+              :label="$t('profile.language')"
+              :error="profileFieldError('locale')"
+              :hint="$t('profile.languageHint')"
+            >
+              <select
+                :id
+                v-model="profileLocale"
+                class="form-field-input"
+                :aria-describedby="describedBy"
+                :aria-invalid="invalid"
+              >
+                <option value="en">English</option>
+                <option value="fi">Suomi</option>
+              </select>
+            </FormField>
+
             <div class="reminder-toggle">
               <input
                 id="digest-opt-in"
@@ -355,13 +382,13 @@ async function confirmDelete(): Promise<void> {
                 class="reminder-checkbox"
               />
               <label for="digest-opt-in" class="reminder-label">
-                Email me a daily nudge about unfinished care moments 🐾
+                {{ $t('profile.reminderLabel') }}
               </label>
             </div>
 
             <FormField
               v-slot="{ id, describedBy, invalid }"
-              label="Current password"
+              :label="$t('profile.currentPassword')"
               :error="profileFieldError('currentPassword')"
             >
               <input
@@ -370,7 +397,7 @@ async function confirmDelete(): Promise<void> {
                 type="password"
                 class="form-field-input"
                 autocomplete="current-password"
-                placeholder="Confirm it's you"
+                :placeholder="$t('profile.confirmItsYou')"
                 :aria-describedby="describedBy"
                 :aria-invalid="invalid"
                 required
@@ -381,21 +408,21 @@ async function confirmDelete(): Promise<void> {
 
             <div class="profile-form-actions">
               <AppButton variant="secondary" type="button" :disabled="profileSaving" @click="editingProfile = false">
-                Cancel
+                {{ $t('common.cancel') }}
               </AppButton>
               <AppButton variant="primary" type="submit" :disabled="profileSaving">
-                {{ profileSaving ? 'Just a moment...' : 'Save Changes' }}
+                {{ profileSaving ? $t('common.justAMoment') : $t('common.saveChanges') }}
               </AppButton>
             </div>
           </form>
         </section>
 
         <section v-if="changingPassword" class="profile-section" aria-labelledby="change-password-title">
-          <h3 id="change-password-title" class="page-title-sm title-underline">Change Paw Code</h3>
+          <h3 id="change-password-title" class="page-title-sm title-underline">{{ $t('profile.changePawCode') }}</h3>
           <form class="profile-form" novalidate @submit.prevent="savePassword">
             <FormField
               v-slot="{ id, describedBy, invalid }"
-              label="Current password"
+              :label="$t('profile.currentPassword')"
               :error="passwordFieldError('currentPassword')"
             >
               <input
@@ -412,7 +439,7 @@ async function confirmDelete(): Promise<void> {
 
             <FormField
               v-slot="{ id, describedBy, invalid }"
-              label="New password"
+              :label="$t('profile.newPassword')"
               :error="passwordFieldError('newPassword')"
             >
               <input
@@ -421,7 +448,7 @@ async function confirmDelete(): Promise<void> {
                 :type="showPasswords ? 'text' : 'password'"
                 class="form-field-input"
                 autocomplete="new-password"
-                placeholder="Create a new secret paw code"
+                :placeholder="$t('profile.newPasswordPlaceholder')"
                 :aria-describedby="describedBy"
                 :aria-invalid="invalid"
                 required
@@ -436,11 +463,11 @@ async function confirmDelete(): Promise<void> {
             >
               <EyeOff v-if="showPasswords" :size="18" aria-hidden="true" />
               <Eye v-else :size="18" aria-hidden="true" />
-              {{ showPasswords ? 'Hide passwords' : 'Show passwords' }}
+              {{ showPasswords ? $t('profile.hidePasswords') : $t('profile.showPasswords') }}
             </button>
 
             <div class="strong-password-note">
-              <p class="rules-title">A strong paw code has:</p>
+              <p class="rules-title">{{ $t('profile.strongPawCodeHas') }}</p>
               <ul>
                 <li v-for="checkItem in passwordChecks" :key="checkItem.id" :class="{ valid: checkItem.valid }">
                   {{ checkItem.label }}
@@ -452,38 +479,32 @@ async function confirmDelete(): Promise<void> {
 
             <div class="profile-form-actions">
               <AppButton variant="secondary" type="button" :disabled="passwordSaving" @click="changingPassword = false">
-                Cancel
+                {{ $t('common.cancel') }}
               </AppButton>
               <AppButton variant="primary" type="submit" :disabled="passwordSaving">
-                {{ passwordSaving ? 'Just a moment...' : 'Update Paw Code' }}
+                {{ passwordSaving ? $t('common.justAMoment') : $t('profile.updatePawCode') }}
               </AppButton>
             </div>
           </form>
         </section>
 
         <section class="danger-zone" aria-labelledby="delete-account-title">
-          <h3 id="delete-account-title" class="danger-zone-title">Leaving the pack?</h3>
-          <p class="danger-zone-note">
-            Deleting your account also removes your pets, their care tasks and their history.
-            Care you logged for other people's pets stays in their diaries without your name.
-          </p>
-          <AppButton variant="danger" @click="openDeleteModal">Delete My Account</AppButton>
+          <h3 id="delete-account-title" class="danger-zone-title">{{ $t('profile.leavingThePack') }}</h3>
+          <p class="danger-zone-note">{{ $t('profile.deleteAccountNote') }}</p>
+          <AppButton variant="danger" @click="openDeleteModal">{{ $t('profile.deleteMyAccount') }}</AppButton>
         </section>
 
-        <AppModal :open="deleting" title="Delete your account?" @close="deleting = false">
-          <p class="remove-note">
-            This removes your account, your pets and their whole care history. There is no undo.
-            Confirm with your current password.
-          </p>
+        <AppModal :open="deleting" :title="$t('profile.deleteAccountTitle')" @close="deleting = false">
+          <p class="remove-note">{{ $t('profile.deleteAccountConfirmNote') }}</p>
           <form novalidate @submit.prevent="confirmDelete">
-            <FormField v-slot="{ id, describedBy, invalid }" label="Current password" :error="deleteError || null">
+            <FormField v-slot="{ id, describedBy, invalid }" :label="$t('profile.currentPassword')" :error="deleteError || null">
               <input
                 :id
                 v-model="deletePassword"
                 type="password"
                 class="form-field-input"
                 autocomplete="current-password"
-                placeholder="Confirm it's you"
+                :placeholder="$t('profile.confirmItsYou')"
                 :aria-describedby="describedBy"
                 :aria-invalid="invalid"
                 required
@@ -491,10 +512,10 @@ async function confirmDelete(): Promise<void> {
             </FormField>
             <div class="remove-actions">
               <AppButton variant="secondary" type="button" :disabled="deleteBusy" @click="deleting = false">
-                Stay in the pack
+                {{ $t('profile.stayInThePack') }}
               </AppButton>
               <AppButton variant="danger" type="submit" :disabled="deleteBusy">
-                {{ deleteBusy ? 'Just a moment...' : 'Delete for good' }}
+                {{ deleteBusy ? $t('common.justAMoment') : $t('profile.deleteForGood') }}
               </AppButton>
             </div>
           </form>

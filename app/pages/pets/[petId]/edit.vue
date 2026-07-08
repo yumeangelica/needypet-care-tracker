@@ -5,6 +5,7 @@ import type { Pet, PetDetail } from '#shared/types/domain';
 definePageMeta({ middleware: 'auth' });
 
 const route = useRoute();
+const { t } = useI18n();
 
 const { data: pet, status, refresh } = await useFetch<PetDetail>(`/api/pets/${route.params.petId}`);
 
@@ -40,7 +41,7 @@ async function confirmRemove(): Promise<void> {
     removeError.value =
       error instanceof FetchError && error.data?.message
         ? error.data.message
-        : 'Something went wrong. Please try again.';
+        : t('errors.generic');
     removing.value = false;
   } finally {
     removeBusy.value = false;
@@ -51,15 +52,15 @@ async function confirmRemove(): Promise<void> {
 <template>
   <div class="content-wrapper">
     <div v-if="status === 'pending'" class="state-note" aria-live="polite">
-      <p>Fetching your family member...</p>
+      <p>{{ $t('pets.fetchingFamilyMember') }}</p>
     </div>
 
     <div v-else-if="!pet" class="confirmation-message">
-      <p>We couldn't find that furry friend. 🐾</p>
-      <NuxtLink to="/home" class="custom-button">Back to My Pets</NuxtLink>
+      <p>{{ $t('pets.notFound') }}</p>
+      <NuxtLink to="/home" class="custom-button">{{ $t('common.backToMyPets') }}</NuxtLink>
     </div>
 
-    <DuoCard v-else-if="pet.isOwner" class="edit-pet-panel" :title="`Edit ${pet.name}`">
+    <DuoCard v-else-if="pet.isOwner" class="edit-pet-panel" :title="$t('pets.editTitle', { name: pet.name })">
       <PetForm :pet="pet" @saved="onSaved" @uploaded="refresh()" @cancel="navigateTo(`/pets/${pet.id}`)" />
 
       <CaretakerManager
@@ -70,25 +71,20 @@ async function confirmRemove(): Promise<void> {
       />
 
       <section class="danger-zone" aria-labelledby="danger-zone-title">
-        <h3 id="danger-zone-title" class="danger-zone-title">Saying goodbye?</h3>
-        <p class="danger-zone-note">
-          Removing {{ pet.name }} also removes all care tasks and their history.
-        </p>
+        <h3 id="danger-zone-title" class="danger-zone-title">{{ $t('pets.sayingGoodbye') }}</h3>
+        <p class="danger-zone-note">{{ $t('pets.removePetNote', { name: pet.name }) }}</p>
         <p v-if="removeError" class="custom-error-message" role="alert">{{ removeError }}</p>
-        <AppButton variant="danger" @click="removing = true">Remove {{ pet.name }}</AppButton>
+        <AppButton variant="danger" @click="removing = true">{{ $t('pets.removePet', { name: pet.name }) }}</AppButton>
       </section>
 
-      <AppModal :open="removing" :title="`Remove ${pet.name}?`" @close="removing = false">
-        <p class="remove-note">
-          This removes {{ pet.name }}, every care task and the whole care history. There is no
-          undo.
-        </p>
+      <AppModal :open="removing" :title="$t('pets.removePetTitle', { name: pet.name })" @close="removing = false">
+        <p class="remove-note">{{ $t('pets.removePetConfirmNote', { name: pet.name }) }}</p>
         <div class="remove-actions">
           <AppButton variant="secondary" :disabled="removeBusy" @click="removing = false">
-            Keep {{ pet.name }}
+            {{ $t('pets.keepPet', { name: pet.name }) }}
           </AppButton>
           <AppButton variant="danger" :disabled="removeBusy" @click="confirmRemove">
-            {{ removeBusy ? 'Removing...' : 'Remove for good' }}
+            {{ removeBusy ? $t('common.removing') : $t('pets.removeForGood') }}
           </AppButton>
         </div>
       </AppModal>

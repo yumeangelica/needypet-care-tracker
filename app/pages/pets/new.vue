@@ -10,8 +10,8 @@ async function onSaved(pet: Pet): Promise<void> {
 
 <template>
   <div class="content-wrapper">
-    <DuoCard class="new-pet-panel" title="Welcome a Pet">
-      <p class="new-pet-intro">Tell us about your new family member 🐾</p>
+    <DuoCard class="new-pet-panel" :title="$t('pets.welcomeAPet')">
+      <p class="new-pet-intro">{{ $t('pets.newPetIntro') }}</p>
       <PetForm @saved="onSaved" @cancel="navigateTo('/home')" />
     </DuoCard>
   </div>

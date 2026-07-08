@@ -15,6 +15,17 @@ const props = defineProps<{
 
 const emit = defineEmits<{ uploaded: [pet: Pet] }>();
 
+const { t } = useI18n();
+
+// Localized display label per preset key (the shared PET_IMAGE_OPTIONS labels
+// stay English — UI copy lives in i18n). A computed so it re-resolves when the
+// user switches language live.
+const presetLabel = computed<Record<PetImageKey, string>>(() => ({
+  dog: t('pets.dog'),
+  cat: t('pets.cat'),
+  bunny: t('pets.bunny'),
+}));
+
 const model = defineModel<PetImageKey>({ required: true });
 
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -55,7 +66,7 @@ async function onFileChange(changeEvent: Event): Promise<void> {
     uploadError.value =
       error instanceof FetchError && error.data?.message
         ? error.data.message
-        : 'Upload failed. Please try again.';
+        : t('errors.uploadFailed');
   } finally {
     uploading.value = false;
   }
@@ -64,7 +75,7 @@ async function onFileChange(changeEvent: Event): Promise<void> {
 
 <template>
   <fieldset class="pet-image-picker">
-    <legend class="form-label">Portrait</legend>
+    <legend class="form-label">{{ $t('pets.portrait') }}</legend>
     <div class="pet-image-options">
       <label
         v-for="key in PET_IMAGE_KEYS"
@@ -74,7 +85,7 @@ async function onFileChange(changeEvent: Event): Promise<void> {
       >
         <input v-model="model" type="radio" name="pet-image" :value="key" class="sr-only" />
         <img :src="PET_IMAGE_OPTIONS[key].src" alt="" class="pet-image-tile" />
-        <span class="pet-image-label">{{ PET_IMAGE_OPTIONS[key].label }}</span>
+        <span class="pet-image-label">{{ presetLabel[key] }}</span>
       </label>
 
       <button
@@ -87,7 +98,7 @@ async function onFileChange(changeEvent: Event): Promise<void> {
       >
         <img v-if="uploadUrl" :src="uploadUrl" alt="" class="pet-image-tile upload-tile" />
         <span v-else class="pet-image-tile upload-placeholder" aria-hidden="true">📷</span>
-        <span class="pet-image-label">{{ uploading ? 'Uploading...' : 'Your photo' }}</span>
+        <span class="pet-image-label">{{ uploading ? $t('pets.uploading') : $t('pets.yourPhoto') }}</span>
       </button>
       <input
         ref="fileInput"
@@ -99,7 +110,7 @@ async function onFileChange(changeEvent: Event): Promise<void> {
         @change="onFileChange"
       />
     </div>
-    <span class="sr-only" role="status" aria-live="polite">{{ uploading ? 'Uploading photo' : '' }}</span>
+    <span class="sr-only" role="status" aria-live="polite">{{ uploading ? $t('pets.uploadingPhoto') : '' }}</span>
     <p v-if="uploadError" class="custom-error-message" role="alert">{{ uploadError }}</p>
   </fieldset>
 </template>

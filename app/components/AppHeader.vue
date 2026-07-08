@@ -8,9 +8,9 @@ import { PawPrint } from '@lucide/vue';
       <PawPrint :size="26" aria-hidden="true" />
       <span class="brand-name">NeedyPet</span>
     </NuxtLink>
-    <nav class="header-nav" aria-label="Main">
-      <NuxtLink to="/home" class="header-link" active-class="is-active">Home</NuxtLink>
-      <NuxtLink to="/profile" class="header-link" active-class="is-active">Profile</NuxtLink>
+    <nav class="header-nav" :aria-label="$t('nav.main')">
+      <NuxtLink to="/home" class="header-link" active-class="is-active">{{ $t('nav.home') }}</NuxtLink>
+      <NuxtLink to="/profile" class="header-link" active-class="is-active">{{ $t('nav.profile') }}</NuxtLink>
     </nav>
   </header>
 </template>

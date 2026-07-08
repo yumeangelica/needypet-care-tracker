@@ -19,6 +19,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{ saved: [need: Need]; cancel: [] }>();
 
+const { t } = useI18n();
+
 const isEdit = computed(() => Boolean(props.record));
 
 const unitLabel = computed(() =>
@@ -90,7 +92,7 @@ async function submit(): Promise<void> {
     } else if (error instanceof FetchError && error.data?.message) {
       errorMessage.value = error.data.message;
     } else {
-      errorMessage.value = 'Something went wrong. Please try again.';
+      errorMessage.value = t('errors.generic');
     }
   } finally {
     submitting.value = false;
@@ -103,7 +105,7 @@ async function submit(): Promise<void> {
     <div class="record-form-row">
       <FormField
         v-slot="{ id, describedBy, invalid }"
-        :label="`Amount (${unitLabel})`"
+        :label="$t('records.amountWithUnit', { unit: unitLabel })"
         :error="measurementError"
         class="record-form-value"
       >
@@ -113,7 +115,7 @@ async function submit(): Promise<void> {
           type="text"
           inputmode="numeric"
           class="form-field-input"
-          :placeholder="need.duration ? 'e.g. 10' : 'e.g. 50'"
+          :placeholder="need.duration ? $t('records.amountShortPlaceholder') : $t('records.amountLongPlaceholder')"
           :aria-describedby="describedBy"
           :aria-invalid="invalid"
           required
@@ -123,9 +125,9 @@ async function submit(): Promise<void> {
 
       <FormField
         v-slot="{ id, describedBy, invalid }"
-        label="Time (optional)"
+        :label="$t('records.timeOptional')"
         :error="firstError('timeOfDay')"
-        :hint="isEdit ? undefined : 'Leave as is to use right now'"
+        :hint="isEdit ? undefined : $t('records.timeHint')"
         class="record-form-time"
       >
         <input
@@ -139,13 +141,13 @@ async function submit(): Promise<void> {
       </FormField>
     </div>
 
-    <FormField v-slot="{ id, describedBy, invalid }" label="Note (optional)" :error="firstError('note')">
+    <FormField v-slot="{ id, describedBy, invalid }" :label="$t('records.noteOptional')" :error="firstError('note')">
       <input
         :id
         v-model="note"
         type="text"
         class="form-field-input"
-        placeholder="e.g. Ate everything!"
+        :placeholder="$t('records.notePlaceholder')"
         :aria-describedby="describedBy"
         :aria-invalid="invalid"
       />
@@ -155,10 +157,10 @@ async function submit(): Promise<void> {
 
     <div class="record-form-actions">
       <AppButton variant="secondary" type="button" :disabled="submitting" @click="emit('cancel')">
-        Cancel
+        {{ $t('common.cancel') }}
       </AppButton>
       <AppButton variant="primary" type="submit" :disabled="submitting">
-        {{ submitting ? 'Just a moment...' : isEdit ? 'Save Changes' : 'Log Care' }}
+        {{ submitting ? $t('common.justAMoment') : isEdit ? $t('common.saveChanges') : $t('records.logCare') }}
       </AppButton>
     </div>
   </form>

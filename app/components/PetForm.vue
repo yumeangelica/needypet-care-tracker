@@ -12,6 +12,8 @@ const props = defineProps<{ pet?: Pet | null }>();
 
 const emit = defineEmits<{ saved: [pet: Pet]; cancel: []; uploaded: [pet: Pet] }>();
 
+const { t } = useI18n();
+
 const isEdit = computed(() => Boolean(props.pet));
 
 const name = ref(props.pet?.name ?? '');
@@ -78,7 +80,7 @@ async function submit() {
     } else if (error instanceof FetchError && error.data?.message) {
       errorMessage.value = error.data.message;
     } else {
-      errorMessage.value = 'Something went wrong. Please try again.';
+      errorMessage.value = t('errors.generic');
     }
   } finally {
     submitting.value = false;
@@ -94,40 +96,40 @@ async function submit() {
       :current-image="props.pet?.image"
       @uploaded="onUploaded"
     />
-    <p v-if="!isEdit" class="pet-form-hint">You can add your own photo after saving.</p>
+    <p v-if="!isEdit" class="pet-form-hint">{{ $t('pets.photoAfterSaving') }}</p>
 
-    <FormField v-slot="{ id, describedBy, invalid }" label="Name" :error="firstError('name')">
+    <FormField v-slot="{ id, describedBy, invalid }" :label="$t('pets.name')" :error="firstError('name')">
       <input
         :id
         v-model="name"
         type="text"
         class="form-field-input"
-        placeholder="What are they called?"
+        :placeholder="$t('pets.namePlaceholder')"
         :aria-describedby="describedBy"
         :aria-invalid="invalid"
         required
       />
     </FormField>
 
-    <FormField v-slot="{ id, describedBy, invalid }" label="Species (optional)" :error="firstError('species')">
+    <FormField v-slot="{ id, describedBy, invalid }" :label="$t('pets.speciesOptional')" :error="firstError('species')">
       <input
         :id
         v-model="species"
         type="text"
         class="form-field-input"
-        placeholder="e.g. Dog"
+        :placeholder="$t('pets.speciesPlaceholder')"
         :aria-describedby="describedBy"
         :aria-invalid="invalid"
       />
     </FormField>
 
-    <FormField v-slot="{ id, describedBy, invalid }" label="Breed (optional)" :error="firstError('breed')">
+    <FormField v-slot="{ id, describedBy, invalid }" :label="$t('pets.breedOptional')" :error="firstError('breed')">
       <input
         :id
         v-model="breed"
         type="text"
         class="form-field-input"
-        placeholder="e.g. Golden Retriever"
+        :placeholder="$t('pets.breedPlaceholder')"
         :aria-describedby="describedBy"
         :aria-invalid="invalid"
       />
@@ -135,7 +137,7 @@ async function submit() {
 
     <FormField
       v-slot="{ id, describedBy, invalid }"
-      label="Description (optional)"
+      :label="$t('pets.descriptionOptional')"
       :error="firstError('description')"
     >
       <textarea
@@ -143,13 +145,13 @@ async function submit() {
         v-model="description"
         class="form-field-input pet-form-textarea"
         rows="3"
-        placeholder="What makes them special?"
+        :placeholder="$t('pets.descriptionPlaceholder')"
         :aria-describedby="describedBy"
         :aria-invalid="invalid"
       />
     </FormField>
 
-    <FormField v-slot="{ id, describedBy, invalid }" label="Birthday (optional)" :error="firstError('birthday')">
+    <FormField v-slot="{ id, describedBy, invalid }" :label="$t('pets.birthdayOptional')" :error="firstError('birthday')">
       <input
         :id
         v-model="birthday"
@@ -164,10 +166,10 @@ async function submit() {
 
     <div class="pet-form-actions">
       <AppButton variant="secondary" type="button" :disabled="submitting" @click="emit('cancel')">
-        Cancel
+        {{ $t('common.cancel') }}
       </AppButton>
       <AppButton variant="primary" type="submit" :disabled="submitting">
-        {{ submitting ? 'Just a moment...' : isEdit ? 'Save Changes' : 'Welcome a Pet' }}
+        {{ submitting ? $t('common.justAMoment') : isEdit ? $t('common.saveChanges') : $t('pets.welcomeAPet') }}
       </AppButton>
     </div>
   </form>

@@ -9,6 +9,7 @@ import { getMeasurementValue } from '#shared/utils/measurement';
 definePageMeta({ middleware: 'auth' });
 
 const route = useRoute();
+const { t, locale } = useI18n();
 const PAGE_SIZE = 50;
 
 const { data: history, status } = await useFetch<PetHistory>(
@@ -45,7 +46,7 @@ async function loadMore(): Promise<void> {
     loadError.value =
       error instanceof FetchError && error.data?.message
         ? error.data.message
-        : 'Something went wrong. Please try again.';
+        : t('errors.generic');
   } finally {
     loadingMore.value = false;
   }
@@ -60,13 +61,13 @@ const groups = computed(() => groupRecordsByDay(allRecords.value, ownerTimezone.
 // timezone never shifts the label (same technique as DayNavigator).
 function dayLabel(day: string): string {
   if (day === ownerToday.value) {
-    return 'Today';
+    return t('common.today');
   }
   if (day === addDaysDateOnly(ownerToday.value, -1)) {
-    return 'Yesterday';
+    return t('records.yesterday');
   }
   const sameYear = day.slice(0, 4) === ownerToday.value.slice(0, 4);
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale.value, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -86,35 +87,35 @@ const showTzHint = computed(() => browserTimezone !== ownerTimezone.value);
 <template>
   <div class="content-wrapper">
     <div v-if="status === 'pending'" class="state-note" aria-live="polite">
-      <p>Fetching the care diary...</p>
+      <p>{{ $t('records.fetchingDiary') }}</p>
     </div>
 
     <div v-else-if="!history" class="confirmation-message">
-      <p>We couldn't find that furry friend. 🐾</p>
-      <NuxtLink to="/home" class="custom-button">Back to My Pets</NuxtLink>
+      <p>{{ $t('pets.notFound') }}</p>
+      <NuxtLink to="/home" class="custom-button">{{ $t('common.backToMyPets') }}</NuxtLink>
     </div>
 
-    <DuoCard v-else class="history-panel" :title="`${history.pet.name}'s Care Diary`">
+    <DuoCard v-else class="history-panel" :title="$t('records.diaryTitle', { name: history.pet.name })">
       <template #actions>
         <NuxtLink :to="`/pets/${history.pet.id}`" class="history-back-link">
-          Back to {{ history.pet.name }}
+          {{ $t('records.backToPet', { name: history.pet.name }) }}
         </NuxtLink>
       </template>
 
       <p v-if="showTzHint" class="history-tz-hint">
-        Times are shown in the owner's timezone ({{ ownerTimezone }}).
+        {{ $t('records.tzHint', { timezone: ownerTimezone }) }}
       </p>
 
       <div v-if="groups.length === 0" class="history-empty">
-        <p class="history-empty-title">No care moments yet</p>
-        <p class="history-empty-note">The diary is waiting for its first entry. 🐾</p>
+        <p class="history-empty-title">{{ $t('records.noCareMomentsYet') }}</p>
+        <p class="history-empty-note">{{ $t('records.diaryEmptyNote') }}</p>
       </div>
 
       <section
         v-for="group in groups"
         :key="group.day"
         class="history-day"
-        :aria-label="`Care on ${dayLabel(group.day)}`"
+        :aria-label="$t('records.careOn', { day: dayLabel(group.day) })"
       >
         <h3 class="history-day-title">{{ dayLabel(group.day) }}</h3>
         <ul class="history-list">
@@ -127,7 +128,7 @@ const showTzHint = computed(() => browserTimezone !== ownerTimezone.value);
               </span>
             </div>
             <p class="history-actor">
-              by {{ entry.actorUserName ?? 'Deleted account' }}
+              {{ $t('records.by', { name: entry.actorUserName ?? $t('common.deletedAccount') }) }}
             </p>
             <p v-if="entry.note" class="history-note">{{ entry.note }}</p>
           </li>
@@ -138,7 +139,7 @@ const showTzHint = computed(() => browserTimezone !== ownerTimezone.value);
 
       <div v-if="hasMore" class="history-more-row">
         <AppButton variant="secondary" :disabled="loadingMore" @click="loadMore">
-          {{ loadingMore ? 'Just a moment...' : 'Show more days' }}
+          {{ loadingMore ? $t('common.justAMoment') : $t('records.showMoreDays') }}
         </AppButton>
       </div>
     </DuoCard>

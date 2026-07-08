@@ -6,6 +6,7 @@ import { addDaysDateOnly, weekStartOf } from '#shared/utils/date';
 definePageMeta({ middleware: 'auth' });
 
 const route = useRoute();
+const { t, locale } = useI18n();
 
 // Empty string = "owner's current week" (server default); set by Prev/Next.
 const weekStart = ref('');
@@ -32,7 +33,7 @@ function changeWeek(days: number): void {
 // Date-only labels are formatted through UTC so the browser's timezone never
 // shifts them (same technique as DayNavigator / history).
 function shortDate(day: string, withYear = false): string {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale.value, {
     month: 'short',
     day: 'numeric',
     ...(withYear ? { year: 'numeric' } : {}),
@@ -45,20 +46,23 @@ const weekLabel = computed(() => {
     return '';
   }
   if (isCurrentWeek.value) {
-    return 'This week';
+    return t('stats.thisWeek');
   }
   const withYear = stats.value.weekStart.slice(0, 4) !== stats.value.ownerToday.slice(0, 4);
-  return `${shortDate(stats.value.weekStart)} – ${shortDate(stats.value.weekEnd, withYear)}`;
+  return t('stats.weekRange', {
+    start: shortDate(stats.value.weekStart),
+    end: shortDate(stats.value.weekEnd, withYear),
+  });
 });
 
 function weekdayInitial(day: string): string {
-  return new Intl.DateTimeFormat('en-US', { weekday: 'narrow', timeZone: 'UTC' }).format(
+  return new Intl.DateTimeFormat(locale.value, { weekday: 'narrow', timeZone: 'UTC' }).format(
     new Date(`${day}T00:00:00Z`),
   );
 }
 
 function weekdayFull(day: string): string {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat(locale.value, {
     weekday: 'long',
     month: 'short',
     day: 'numeric',
@@ -93,35 +97,35 @@ function formatTotal(total: number): string {
 <template>
   <div class="content-wrapper">
     <div v-if="status === 'pending' && !stats" class="state-note" aria-live="polite">
-      <p>Counting the care moments...</p>
+      <p>{{ $t('stats.counting') }}</p>
     </div>
 
     <div v-else-if="error || !stats" class="confirmation-message">
-      <p>We couldn't find that furry friend. 🐾</p>
-      <NuxtLink to="/home" class="custom-button">Back to My Pets</NuxtLink>
+      <p>{{ $t('pets.notFound') }}</p>
+      <NuxtLink to="/home" class="custom-button">{{ $t('common.backToMyPets') }}</NuxtLink>
     </div>
 
-    <DuoCard v-else class="stats-panel" :title="`${stats.pet.name}'s Week`">
+    <DuoCard v-else class="stats-panel" :title="$t('stats.weekTitle', { name: stats.pet.name })">
       <template #actions>
         <NuxtLink :to="`/pets/${stats.pet.id}`" class="stats-back-link">
-          Back to {{ stats.pet.name }}
+          {{ $t('records.backToPet', { name: stats.pet.name }) }}
         </NuxtLink>
       </template>
 
-      <nav class="week-nav" aria-label="Week">
-        <button type="button" class="week-nav-button" aria-label="Previous week" @click="changeWeek(-7)">
+      <nav class="week-nav" :aria-label="$t('stats.week')">
+        <button type="button" class="week-nav-button" :aria-label="$t('stats.previousWeek')" @click="changeWeek(-7)">
           <ChevronLeft :size="18" aria-hidden="true" />
-          <span class="week-nav-label">Previous</span>
+          <span class="week-nav-label">{{ $t('common.previous') }}</span>
         </button>
         <p class="week-nav-current" aria-live="polite">{{ weekLabel }}</p>
         <button
           type="button"
           class="week-nav-button"
-          aria-label="Next week"
+          :aria-label="$t('stats.nextWeek')"
           :disabled="isCurrentWeek"
           @click="changeWeek(7)"
         >
-          <span class="week-nav-label">Next</span>
+          <span class="week-nav-label">{{ $t('common.next') }}</span>
           <ChevronRight :size="18" aria-hidden="true" />
         </button>
       </nav>
@@ -129,16 +133,16 @@ function formatTotal(total: number): string {
       <div class="stat-tiles">
         <div class="stat-tile">
           <p class="stat-tile-value">{{ stats.streak }}</p>
-          <p class="stat-tile-label">day streak {{ stats.streak > 0 ? '🔥' : '' }}</p>
+          <p class="stat-tile-label">{{ $t('stats.dayStreak') }} {{ stats.streak > 0 ? '🔥' : '' }}</p>
         </div>
         <div class="stat-tile">
           <p class="stat-tile-value">{{ stats.totalRecords }}</p>
-          <p class="stat-tile-label">care moments this week</p>
+          <p class="stat-tile-label">{{ $t('stats.careMomentsThisWeek') }}</p>
         </div>
       </div>
 
-      <section aria-label="Care moments per day">
-        <h3 class="stats-section-title">Care per day</h3>
+      <section :aria-label="$t('stats.careMomentsPerDay')">
+        <h3 class="stats-section-title">{{ $t('stats.carePerDay') }}</h3>
         <ul class="day-bars">
           <li
             v-for="day in stats.days"
@@ -146,7 +150,7 @@ function formatTotal(total: number): string {
             class="day-bar-column"
             :class="{ today: day.day === stats.ownerToday }"
           >
-            <span class="sr-only">{{ weekdayFull(day.day) }}: {{ day.recordCount }} care moments</span>
+            <span class="sr-only">{{ $t('stats.dayCountSr', { weekday: weekdayFull(day.day), count: day.recordCount }) }}</span>
             <span class="day-bar-count" aria-hidden="true">{{ day.recordCount || '' }}</span>
             <span class="day-bar-track" aria-hidden="true">
               <span
@@ -159,11 +163,11 @@ function formatTotal(total: number): string {
         </ul>
       </section>
 
-      <section aria-label="Totals per care task">
-        <h3 class="stats-section-title">Totals per care task</h3>
+      <section :aria-label="$t('stats.totalsPerCareTask')">
+        <h3 class="stats-section-title">{{ $t('stats.totalsPerCareTask') }}</h3>
         <div v-if="stats.categories.length === 0" class="stats-empty">
-          <p class="stats-empty-title">A quiet week so far</p>
-          <p class="stats-empty-note">Logged care will show up here. 🐾</p>
+          <p class="stats-empty-title">{{ $t('stats.quietWeek') }}</p>
+          <p class="stats-empty-note">{{ $t('stats.quietWeekNote') }}</p>
         </div>
         <ul v-else class="category-list">
           <li v-for="category in stats.categories" :key="`${category.category}-${category.unit}`" class="category-row">

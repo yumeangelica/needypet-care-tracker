@@ -6,6 +6,11 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['nuxt-auth-utils', '@vite-pwa/nuxt'],
   css: ['~/assets/css/main.css'],
+  // We use vue-i18n directly as a plugin (not @nuxtjs/i18n), so auto-import its
+  // Composition-API entry point to match how Nuxt composables are used elsewhere.
+  imports: {
+    presets: [{ from: 'vue-i18n', imports: ['useI18n'] }],
+  },
   // Prerender the offline page to a static HTML file so the service worker can
   // precache it and serve it as the navigation fallback when the network is down
   // (an SSR-only route has no cached document to fall back to).
@@ -29,7 +34,9 @@ export default defineNuxtConfig({
         { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
       ],
-      htmlAttrs: { lang: 'en' },
+      // htmlAttrs.lang is set reactively in app.vue so <html lang> follows the
+      // signed-in user's UI language ('en' | 'fi'); the PWA manifest lang below
+      // stays 'en' (it is generated at build time and can't be per-user).
     },
   },
   // Installable PWA: @vite-pwa/nuxt injects the web manifest link and generates a

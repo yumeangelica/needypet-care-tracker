@@ -88,4 +88,19 @@ describe('message builders', () => {
     expect(message.text).toContain('Misty — Breakfast');
     expect(message.text).toContain('https://app.test/home');
   });
+
+  it('dailyDigestMessage localizes the copy to the recipient locale (fi)', () => {
+    const sections = [{ petName: 'Bella', needs: [{ category: 'Fresh water', description: '' }] }];
+    const en = dailyDigestMessage('o@example.com', sections, 'https://app.test/home', 'en');
+    const fi = dailyDigestMessage('o@example.com', sections, 'https://app.test/home', 'fi');
+
+    // Subject and framing copy differ by locale...
+    expect(en.subject).toBe('Your pets still need you today 🐾');
+    expect(fi.subject).toBe('Lemmikkisi tarvitsevat sinua vielä tänään 🐾');
+    expect(fi.text).toContain('Muutama hoitohetki odottaa vielä:');
+    // ...but the pet/category data (user-authored) is untranslated, and the
+    // link is unchanged.
+    expect(fi.text).toContain('Bella — Fresh water');
+    expect(fi.text).toContain('https://app.test/home');
+  });
 });

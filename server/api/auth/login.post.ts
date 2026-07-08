@@ -24,7 +24,9 @@ export default defineEventHandler(async (event) => {
   }
 
   resetRateLimit(accountKey);
-  await setUserSession(event, { user: { id: user.id, userName: user.userName } });
+  await setUserSession(event, {
+    user: { id: user.id, userName: user.userName, locale: user.locale as 'en' | 'fi' },
+  });
 
   return { message: 'Login successful', user: toPublicUser(user) };
 });

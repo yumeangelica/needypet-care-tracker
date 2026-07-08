@@ -1,3 +1,4 @@
+import type { Locale } from '#shared/types/domain';
 import type { DigestPetSection } from '#shared/utils/digest';
 
 export interface MailMessage {
@@ -113,31 +114,59 @@ export function passwordResetMessage(to: string, link: string): MailMessage {
 }
 
 /**
+ * Localized copy for the daily digest. Confirmation/reset mails stay English
+ * (they can go out before a user has chosen a language); the digest is sent to
+ * an established account, so it follows the recipient's saved locale.
+ */
+const digestCopy: Record<Locale, { subject: string; intro: string; open: string; footer: string[] }> = {
+  en: {
+    subject: 'Your pets still need you today 🐾',
+    intro: 'A few care moments are still waiting:',
+    open: 'Open NeedyPet to log them:',
+    footer: [
+      'You get this because daily reminders are on. Turn them off any time',
+      'from your profile.',
+    ],
+  },
+  fi: {
+    subject: 'Lemmikkisi tarvitsevat sinua vielä tänään 🐾',
+    intro: 'Muutama hoitohetki odottaa vielä:',
+    open: 'Avaa NeedyPet ja kirjaa ne:',
+    footer: [
+      'Saat tämän, koska päivittäiset muistutukset ovat päällä. Voit kytkeä',
+      'ne pois milloin tahansa profiilistasi.',
+    ],
+  },
+};
+
+/**
  * The daily nudge about unfinished care tasks. One line per pet listing the
  * categories still waiting today. Callers only build this when there is at
- * least one open task across the recipient's pets.
+ * least one open task across the recipient's pets. Copy follows the recipient's
+ * locale (defaulting to English).
  */
 export function dailyDigestMessage(
   to: string,
   sections: DigestPetSection[],
   homeLink: string,
+  locale: Locale = 'en',
 ): MailMessage {
+  const copy = digestCopy[locale] ?? digestCopy.en;
   const petLines = sections.map(
     (section) => `• ${section.petName} — ${section.needs.map((need) => need.category).join(', ')}`,
   );
   return {
     to,
-    subject: 'Your pets still need you today 🐾',
+    subject: copy.subject,
     text: [
-      'A few care moments are still waiting:',
+      copy.intro,
       '',
       ...petLines,
       '',
-      'Open NeedyPet to log them:',
+      copy.open,
       homeLink,
       '',
-      'You get this because daily reminders are on. Turn them off any time',
-      'from your profile.',
+      ...copy.footer,
     ].join('\n'),
   };
 }

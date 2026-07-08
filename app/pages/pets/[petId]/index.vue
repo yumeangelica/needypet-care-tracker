@@ -9,6 +9,7 @@ import { bucketRecordsByNeed } from '#shared/utils/records';
 definePageMeta({ middleware: 'auth' });
 
 const route = useRoute();
+const { t } = useI18n();
 
 const { data: pet, status, refresh } = await useFetch<PetDetail>(`/api/pets/${route.params.petId}`);
 
@@ -104,19 +105,19 @@ const emptyState = computed(() => {
   const relation = compareDateOnly(currentDate.value, ownerToday.value);
   if (relation > 0) {
     return {
-      title: 'Care tasks will appear when this day starts',
-      note: 'Nothing needs doing yet. Daily routines are generated on the day they are due.',
+      title: t('needs.emptyFutureTitle'),
+      note: t('needs.emptyFutureNote'),
     };
   }
   if (relation < 0) {
     return {
-      title: 'No care tasks for this day',
-      note: 'There were no care tasks scheduled here.',
+      title: t('needs.emptyPastTitle'),
+      note: t('needs.emptyPastNote'),
     };
   }
   return {
-    title: 'All clear for today! 🎉',
-    note: 'No care tasks are waiting right now.',
+    title: t('needs.emptyTodayTitle'),
+    note: t('needs.emptyTodayNote'),
   };
 });
 
@@ -158,7 +159,7 @@ async function onNeedSaved(): Promise<void> {
 function fetchErrorMessage(error: unknown): string {
   return error instanceof FetchError && error.data?.message
     ? error.data.message
-    : 'Something went wrong. Please try again.';
+    : t('errors.generic');
 }
 
 async function toggleNeed(need: Need): Promise<void> {
@@ -220,56 +221,56 @@ async function confirmLeave(): Promise<void> {
 <template>
   <div class="content-wrapper">
     <div v-if="status === 'pending'" class="state-note" aria-live="polite">
-      <p>Fetching your family member...</p>
+      <p>{{ $t('pets.fetchingFamilyMember') }}</p>
     </div>
 
     <div v-else-if="!pet" class="confirmation-message">
-      <p>We couldn't find that furry friend. 🐾</p>
-      <NuxtLink to="/home" class="custom-button">Back to My Pets</NuxtLink>
+      <p>{{ $t('pets.notFound') }}</p>
+      <NuxtLink to="/home" class="custom-button">{{ $t('common.backToMyPets') }}</NuxtLink>
     </div>
 
     <DuoCard v-else class="pet-panel" :title="pet.name">
       <template v-if="pet.isOwner" #actions>
-        <NuxtLink :to="`/pets/${pet.id}/edit`" class="pet-edit-link" :aria-label="`Edit ${pet.name}`">
+        <NuxtLink :to="`/pets/${pet.id}/edit`" class="pet-edit-link" :aria-label="$t('pets.editAria', { name: pet.name })">
           <Settings :size="20" aria-hidden="true" />
-          <span class="pet-edit-label">Edit</span>
+          <span class="pet-edit-label">{{ $t('common.edit') }}</span>
         </NuxtLink>
       </template>
       <div class="pet-info">
         <PetStickerTile :image="pet.image" :pet-name="pet.name" size="lg" />
         <dl class="pet-facts">
           <template v-if="pet.description">
-            <dt>Description</dt>
+            <dt>{{ $t('pets.description') }}</dt>
             <dd>{{ pet.description }}</dd>
           </template>
           <template v-if="pet.species">
-            <dt>Species</dt>
+            <dt>{{ $t('pets.species') }}</dt>
             <dd>{{ pet.species }}</dd>
           </template>
           <template v-if="pet.breed">
-            <dt>Breed</dt>
+            <dt>{{ $t('pets.breed') }}</dt>
             <dd>{{ pet.breed }}</dd>
           </template>
           <template v-if="pet.birthday">
-            <dt>Birthday</dt>
+            <dt>{{ $t('pets.birthday') }}</dt>
             <dd>{{ pet.birthday }}</dd>
           </template>
-          <dt>Owner</dt>
-          <dd>{{ pet.isOwner ? 'You' : pet.owner.userName }}</dd>
+          <dt>{{ $t('pets.owner') }}</dt>
+          <dd>{{ pet.isOwner ? $t('common.you') : pet.owner.userName }}</dd>
         </dl>
       </div>
 
       <section aria-labelledby="care-tasks-title" class="tasks-section">
         <div class="tasks-heading-row">
-          <h3 id="care-tasks-title" class="page-title-sm title-underline">Daily Care Tasks</h3>
+          <h3 id="care-tasks-title" class="page-title-sm title-underline">{{ $t('needs.dailyCareTasks') }}</h3>
           <div class="tasks-heading-links">
             <NuxtLink :to="`/pets/${pet.id}/stats`" class="diary-link">
               <ChartColumn :size="16" aria-hidden="true" />
-              Stats
+              {{ $t('needs.stats') }}
             </NuxtLink>
             <NuxtLink :to="`/pets/${pet.id}/history`" class="diary-link">
               <BookOpen :size="16" aria-hidden="true" />
-              Care Diary
+              {{ $t('needs.careDiary') }}
             </NuxtLink>
           </div>
         </div>
@@ -279,14 +280,14 @@ async function confirmLeave(): Promise<void> {
         <p v-if="actionError" class="custom-error-message" role="alert">{{ actionError }}</p>
 
         <p v-if="dayRecordsPending" class="day-records-note" role="status" aria-live="polite">
-          Fetching care history...
+          {{ $t('needs.fetchingCareHistory') }}
         </p>
         <div v-else-if="dayRecordsErrorDate === currentDate" class="day-records-error">
-          <p class="custom-error-message" role="alert">Couldn't load this day's care history.</p>
-          <AppButton variant="secondary" @click="loadDayRecords(currentDate)">Try again</AppButton>
+          <p class="custom-error-message" role="alert">{{ $t('records.loadDayError') }}</p>
+          <AppButton variant="secondary" @click="loadDayRecords(currentDate)">{{ $t('common.tryAgain') }}</AppButton>
         </div>
 
-        <ul v-if="needsForCurrentDate.length > 0" class="need-list" aria-label="Care tasks for selected day">
+        <ul v-if="needsForCurrentDate.length > 0" class="need-list" :aria-label="$t('needs.tasksForSelectedDay')">
           <li v-for="need in needsForCurrentDate" :key="need.id">
             <NeedCard
               :need="need"
@@ -309,26 +310,23 @@ async function confirmLeave(): Promise<void> {
         <div v-if="canAddNeed" class="tasks-add-row">
           <button type="button" class="custom-button" @click="openAddForm">
             <CirclePlus :size="20" aria-hidden="true" />
-            Add a Care Task
+            {{ $t('needs.addCareTask') }}
           </button>
         </div>
-        <p v-else-if="dayIsFull" class="tasks-full-note">That's plenty of love for one day! 🐾</p>
+        <p v-else-if="dayIsFull" class="tasks-full-note">{{ $t('needs.dayFull') }}</p>
       </section>
 
       <section v-if="!pet.isOwner" class="leave-section" aria-labelledby="leave-title">
-        <h3 id="leave-title" class="leave-title">Taking a break?</h3>
-        <p class="leave-note">
-          If you stop helping, {{ pet.name }} disappears from your pets. Your past care history
-          stays in the diary.
-        </p>
+        <h3 id="leave-title" class="leave-title">{{ $t('pets.leaveTitle') }}</h3>
+        <p class="leave-note">{{ $t('pets.leaveNote', { name: pet.name }) }}</p>
         <AppButton variant="danger" @click="leaving = true">
-          Stop helping with {{ pet.name }}
+          {{ $t('pets.stopHelpingWith', { name: pet.name }) }}
         </AppButton>
       </section>
 
       <AppModal
         :open="formOpen"
-        :title="editingNeed ? 'Edit Care Task' : 'Add a Care Task'"
+        :title="editingNeed ? $t('needs.editCareTask') : $t('needs.addCareTask')"
         @close="formOpen = false"
       >
         <NeedForm
@@ -341,31 +339,28 @@ async function confirmLeave(): Promise<void> {
         />
       </AppModal>
 
-      <AppModal :open="leaving" :title="`Stop helping with ${pet.name}?`" @close="leaving = false">
-        <p class="remove-note">
-          You won't see {{ pet.name }} or log care tasks anymore. The owner can invite you back
-          any time.
-        </p>
+      <AppModal :open="leaving" :title="$t('pets.stopHelpingTitle', { name: pet.name })" @close="leaving = false">
+        <p class="remove-note">{{ $t('pets.leaveConfirmNote', { name: pet.name }) }}</p>
         <div class="remove-actions">
           <AppButton variant="secondary" :disabled="leaveBusy" @click="leaving = false">
-            Keep helping
+            {{ $t('pets.keepHelping') }}
           </AppButton>
           <AppButton variant="danger" :disabled="leaveBusy" @click="confirmLeave">
-            {{ leaveBusy ? 'Just a moment...' : 'Stop helping' }}
+            {{ leaveBusy ? $t('common.justAMoment') : $t('pets.stopHelping') }}
           </AppButton>
         </div>
       </AppModal>
 
-      <AppModal :open="removingNeed !== null" title="Remove this care task?" @close="removingNeed = null">
+      <AppModal :open="removingNeed !== null" :title="$t('needs.removeCareTaskTitle')" @close="removingNeed = null">
         <p class="remove-note">
-          "{{ removingNeed?.category }}" and its care history will be removed for good.
+          {{ $t('needs.removeCareTaskNote', { category: removingNeed?.category }) }}
         </p>
         <div class="remove-actions">
           <AppButton variant="secondary" :disabled="removeBusy" @click="removingNeed = null">
-            Keep it
+            {{ $t('common.keepIt') }}
           </AppButton>
           <AppButton variant="danger" :disabled="removeBusy" @click="confirmRemove">
-            {{ removeBusy ? 'Removing...' : 'Remove' }}
+            {{ removeBusy ? $t('common.removing') : $t('common.remove') }}
           </AppButton>
         </div>
       </AppModal>

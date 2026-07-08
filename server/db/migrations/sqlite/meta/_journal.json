@@ -15,6 +15,13 @@
       "when": 1783381454998,
       "tag": "0001_illegal_garia",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1783519642644,
+      "tag": "0002_sad_killraven",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { PetImage } from '#shared/types/domain';
-import { getPetImageLabel, getPetImageSrc } from '#shared/utils/petImages';
+import { getPetImageSrc, normalizePetImage } from '#shared/utils/petImages';
 
 const props = withDefaults(
   defineProps<{
@@ -12,11 +12,21 @@ const props = withDefaults(
   { size: 'md' },
 );
 
+const { t } = useI18n();
+
 const src = computed(() => getPetImageSrc(props.image));
-// Uploads have no species label — the pet's name alone is the right alt text.
+// Uploads have no species — the pet's name alone is the right alt text. For
+// presets the species is localized via a per-key i18n label, and the alt is
+// built from a whole-phrase key so no locale-breaking lowercasing is needed.
 const alt = computed(() => {
-  const label = getPetImageLabel(props.image);
-  return label ? `${props.petName} the ${label.toLowerCase()}` : props.petName;
+  const normalized = normalizePetImage(props.image);
+  if (normalized.source === 'upload') {
+    return props.petName;
+  }
+  return t('pets.stickerAlt', {
+    name: props.petName,
+    species: t(`pets.species${normalized.key.charAt(0).toUpperCase()}${normalized.key.slice(1)}`),
+  });
 });
 </script>
 

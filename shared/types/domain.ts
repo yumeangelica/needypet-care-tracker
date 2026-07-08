@@ -9,6 +9,9 @@
  *   IANA `timezone` is stored alongside it for audit context only.
  */
 
+/** UI language stored on the user profile. Default is always 'en'. */
+export type Locale = 'en' | 'fi';
+
 export type PetImageKey = 'dog' | 'cat' | 'bunny';
 
 /** Preset sticker or the owner's uploaded photo (storage key stays server-side). */
@@ -41,6 +44,7 @@ export interface PublicUser {
   email: string;
   emailConfirmed: boolean;
   timezone: string;
+  locale: Locale;
   digestOptIn: boolean;
 }
 
