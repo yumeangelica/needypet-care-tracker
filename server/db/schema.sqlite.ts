@@ -7,6 +7,7 @@ import { check, index, integer, primaryKey, real, sqliteTable, text } from 'driz
  * - TEXT UUID primary keys (crypto.randomUUID())
  * - date-only values as TEXT 'YYYY-MM-DD' (string-compared)
  * - timestamps as TEXT ISO-8601 UTC
+ *   (both parsed to Temporal in shared/utils/{date,datetime}.ts, never stored as Temporal)
  * - integer({ mode: 'boolean' }) for boolean columns
  * Every table keeps a nullable legacy_id for future Mongo import traceability.
  */

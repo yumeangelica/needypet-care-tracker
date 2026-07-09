@@ -1,6 +1,8 @@
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { hashUserPassword } from '../utils/password';
 import { addDaysDateOnly, todayInTimeZone } from '../../shared/utils/date';
+import { instantToIso } from '../../shared/utils/datetime';
+import { Temporal } from '../../shared/utils/temporal';
 import { useDb } from './index';
 import { careRecords, needs, petCaretakers, pets, users } from './schema';
 
@@ -21,10 +23,10 @@ if (process.env.NUXT_DB_URL) {
 const db = useDb();
 migrate(db, { migrationsFolder: 'server/db/migrations/sqlite' });
 
-const now = new Date().toISOString();
+const now = instantToIso(Temporal.Now.instant());
 const today = todayInTimeZone('Europe/Helsinki');
 const yesterday = addDaysDateOnly(today, -1);
-const yesterdayStamp = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+const yesterdayStamp = instantToIso(Temporal.Now.instant().subtract({ hours: 24 }));
 const id = () => crypto.randomUUID();
 
 // Reset previous seed data (local dev database only).

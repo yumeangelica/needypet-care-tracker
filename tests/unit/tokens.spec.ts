@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createToken, expiryFromNow, hashToken } from '../../server/utils/tokens';
+import { instantToIso } from '../../shared/utils/datetime';
+import { Temporal } from '../../shared/utils/temporal';
 
 describe('createToken', () => {
   it('returns a url-safe token and its sha256 hash', async () => {
@@ -29,7 +31,7 @@ describe('hashToken', () => {
 
 describe('expiryFromNow', () => {
   it('returns a future ISO timestamp that grows with hours', () => {
-    const now = new Date().toISOString();
+    const now = instantToIso(Temporal.Now.instant());
     const oneHour = expiryFromNow(1);
     const dayLater = expiryFromNow(24);
     expect(oneHour > now).toBe(true);

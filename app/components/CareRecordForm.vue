@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { careRecordSchema, careRecordUpdateSchema } from '#shared/schemas/careRecord';
 import type { CareRecordWithActor, Need } from '#shared/types/domain';
 import { formatTimeInTimeZone } from '#shared/utils/datetime';
+import { Temporal } from '#shared/utils/temporal';
 
 /**
  * Logs a partial care amount (POST) or edits an existing record (PATCH when
@@ -68,7 +69,7 @@ async function submit(): Promise<void> {
   const timeChanged = timeOfDay.value !== '' && timeOfDay.value !== initialTime;
   const input = {
     note: note.value.trim(),
-    ...(isEdit.value ? {} : { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
+    ...(isEdit.value ? {} : { timezone: Temporal.Now.timeZoneId() }),
     ...measurement,
     ...(timeChanged ? { timeOfDay: timeOfDay.value } : {}),
   };

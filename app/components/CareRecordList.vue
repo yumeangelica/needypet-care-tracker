@@ -4,6 +4,7 @@ import type { CareRecordWithActor, Need } from '#shared/types/domain';
 import { canMutateRecord } from '#shared/utils/careRules';
 import { formatTimeInTimeZone } from '#shared/utils/datetime';
 import { getMeasurementValue } from '#shared/utils/measurement';
+import { Temporal } from '#shared/utils/temporal';
 
 /**
  * The care log of one need: who did what, when and how much. Times are shown
@@ -27,7 +28,7 @@ const unitLabel = computed(() =>
 );
 
 // When the viewer's clock differs from the owner's, label whose clock it is.
-const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const browserTimezone = Temporal.Now.timeZoneId();
 const showTzHint = computed(() => browserTimezone !== props.ownerTimezone);
 
 function recordTime(record: CareRecordWithActor): string {

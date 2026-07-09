@@ -1,85 +1,47 @@
 /**
  * Instant (UTC timestamp) <-> timezone helpers for care records. Date-only
- * helpers live in date.ts; these deal with time-of-day, always through Intl
- * so the browser's local timezone never leaks in.
+ * helpers live in date.ts; these deal with time-of-day through Temporal so the
+ * browser's local timezone never leaks in. Values cross the wire and hit the DB
+ * as strings; Temporal is used only for the computation in between.
  */
 
-const partsFormatterCache = new Map<string, Intl.DateTimeFormat>();
+import { Temporal } from './temporal';
 
-function getPartsFormatter(timeZone: string): Intl.DateTimeFormat {
-  let formatter = partsFormatterCache.get(timeZone);
-  if (!formatter) {
-    formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone,
-      hourCycle: 'h23',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-    partsFormatterCache.set(timeZone, formatter);
-  }
-  return formatter;
-}
-
-/** Offset of `timeZone` from UTC at the given instant, in milliseconds. */
-function tzOffsetMs(timeZone: string, utc: Date): number {
-  const parts = getPartsFormatter(timeZone).formatToParts(utc);
-  const get = (type: Intl.DateTimeFormatPartTypes): number =>
-    Number(parts.find((part) => part.type === type)?.value ?? 0);
-  const asUtc = Date.UTC(
-    get('year'),
-    get('month') - 1,
-    get('day'),
-    get('hour'),
-    get('minute'),
-    get('second'),
-  );
-  return asUtc - utc.getTime();
+/**
+ * A UTC instant as a millisecond-precision ISO string (`...:00.000Z`), matching
+ * the stored timestamp format. `Instant.toString()` omits the `.000` when the
+ * sub-second part is zero, so the precision is pinned explicitly.
+ */
+export function instantToIso(instant: Temporal.Instant): string {
+  return instant.toString({ smallestUnit: 'millisecond' });
 }
 
 /**
  * Converts a wall-clock moment ('YYYY-MM-DD' + 'HH:mm' in an IANA timezone)
- * to a UTC ISO timestamp without a date library.
+ * to a UTC ISO timestamp.
  *
- * DST edges resolve deterministically: an ambiguous fall-back time maps to
- * one of its two instants, and a nonexistent spring-forward time shifts by
- * the gap. Callers that must stay inside a calendar day should round-trip
- * the result through todayInTimeZone and compare.
+ * DST edges resolve deterministically via Temporal's default 'compatible'
+ * disambiguation: a nonexistent spring-forward time shifts forward by the gap,
+ * and an ambiguous fall-back time maps to the earlier of its two instants.
+ * Callers that must stay inside a calendar day should round-trip the result
+ * through todayInTimeZone and compare.
  */
 export function zonedDateTimeToUtcIso(dateOnly: string, timeOfDay: string, timeZone: string): string {
-  const [year, month, day] = dateOnly.split('-').map(Number);
-  const [hour, minute] = timeOfDay.split(':').map(Number);
-  const guess = Date.UTC(year!, month! - 1, day!, hour!, minute!, 0);
-  const firstOffset = tzOffsetMs(timeZone, new Date(guess));
-  let utcMs = guess - firstOffset;
-  const secondOffset = tzOffsetMs(timeZone, new Date(utcMs));
-  if (secondOffset !== firstOffset) {
-    utcMs = guess - secondOffset;
-  }
-  return new Date(utcMs).toISOString();
+  const instant = Temporal.PlainDateTime.from(`${dateOnly}T${timeOfDay}`)
+    .toZonedDateTime(timeZone)
+    .toInstant();
+  return instantToIso(instant);
 }
 
 /** 'HH:mm' wall-clock time of a UTC instant in the given timezone. */
 export function formatTimeInTimeZone(isoUtc: string, timeZone: string): string {
-  return new Intl.DateTimeFormat('en-GB', {
-    timeZone,
-    hourCycle: 'h23',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(isoUtc));
+  const time = Temporal.Instant.from(isoUtc).toZonedDateTimeISO(timeZone).toPlainTime();
+  return `${String(time.hour).padStart(2, '0')}:${String(time.minute).padStart(2, '0')}`;
 }
 
 /** The calendar day ('YYYY-MM-DD') a UTC instant falls on in the given timezone. */
 export function dateOnlyInTimeZone(isoUtc: string, timeZone: string): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date(isoUtc));
+  return Temporal.Instant.from(isoUtc).toZonedDateTimeISO(timeZone).toPlainDate().toString();
 }
 
 /**

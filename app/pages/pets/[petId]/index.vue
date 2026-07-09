@@ -5,6 +5,7 @@ import { MAX_NEEDS_PER_DAY } from '#shared/schemas/need';
 import type { CareRecordWithActor, Need, NeedWithRecords, PetDetail, PetHistory } from '#shared/types/domain';
 import { compareDateOnly, todayInTimeZone } from '#shared/utils/date';
 import { bucketRecordsByNeed } from '#shared/utils/records';
+import { Temporal } from '#shared/utils/temporal';
 
 definePageMeta({ middleware: 'auth' });
 
@@ -15,11 +16,11 @@ const { data: pet, status, refresh } = await useFetch<PetDetail>(`/api/pets/${ro
 
 // "Today" always follows the pet owner's timezone, never the browser's.
 // A one-minute ticker keeps it fresh across the owner's midnight.
-const nowTick = ref(new Date());
+const nowTick = ref(Temporal.Now.instant());
 let ticker: ReturnType<typeof setInterval> | undefined;
 onMounted(() => {
   ticker = setInterval(() => {
-    nowTick.value = new Date();
+    nowTick.value = Temporal.Now.instant();
   }, 60_000);
 });
 onUnmounted(() => clearInterval(ticker));

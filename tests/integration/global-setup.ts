@@ -3,6 +3,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Temporal } from '../../shared/utils/temporal';
 import {
   buildFixture,
   createTestContext,
@@ -129,10 +130,10 @@ async function waitForBuiltServer(
   url: string,
   subprocess: Bun.Subprocess<'ignore', 'inherit', 'inherit'>,
 ): Promise<void> {
-  const deadline = Date.now() + 60_000;
+  const deadline = Temporal.Now.instant().epochMilliseconds + 60_000;
   let lastError: unknown;
 
-  while (Date.now() < deadline) {
+  while (Temporal.Now.instant().epochMilliseconds < deadline) {
     if (subprocess.exitCode !== null) {
       throw new Error(`Integration test server exited before becoming ready: ${subprocess.exitCode}`);
     }

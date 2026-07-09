@@ -5,6 +5,8 @@ import { confirmEmailMessage, useMailer } from '../../utils/mailer';
 import { checkRateLimit } from '../../utils/rateLimit';
 import { requireAppUser } from '../../utils/session';
 import { createToken, expiryFromNow } from '../../utils/tokens';
+import { instantToIso } from '#shared/utils/datetime';
+import { Temporal } from '#shared/utils/temporal';
 
 /** Regenerates the confirmation token (the old link dies) and resends. */
 export default defineEventHandler(async (event) => {
@@ -20,7 +22,7 @@ export default defineEventHandler(async (event) => {
     .set({
       emailConfirmToken: confirm.tokenHash,
       emailConfirmExpiresAt: expiryFromNow(24),
-      updatedAt: new Date().toISOString(),
+      updatedAt: instantToIso(Temporal.Now.instant()),
     })
     .where(eq(users.id, user.id));
 

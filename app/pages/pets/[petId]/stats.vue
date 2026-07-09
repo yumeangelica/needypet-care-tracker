@@ -2,6 +2,7 @@
 import { ChevronLeft, ChevronRight } from '@lucide/vue';
 import type { PetWeekStats } from '#shared/types/domain';
 import { addDaysDateOnly, weekStartOf } from '#shared/utils/date';
+import { Temporal } from '#shared/utils/temporal';
 
 definePageMeta({ middleware: 'auth' });
 
@@ -30,15 +31,14 @@ function changeWeek(days: number): void {
   }
 }
 
-// Date-only labels are formatted through UTC so the browser's timezone never
-// shifts them (same technique as DayNavigator / history).
+// Date-only labels use PlainDate (no timezone) so the browser's timezone can
+// never shift them (same technique as DayNavigator / history).
 function shortDate(day: string, withYear = false): string {
-  return new Intl.DateTimeFormat(locale.value, {
+  return Temporal.PlainDate.from(day).toLocaleString(locale.value, {
     month: 'short',
     day: 'numeric',
     ...(withYear ? { year: 'numeric' } : {}),
-    timeZone: 'UTC',
-  }).format(new Date(`${day}T00:00:00Z`));
+  });
 }
 
 const weekLabel = computed(() => {
@@ -56,18 +56,15 @@ const weekLabel = computed(() => {
 });
 
 function weekdayInitial(day: string): string {
-  return new Intl.DateTimeFormat(locale.value, { weekday: 'narrow', timeZone: 'UTC' }).format(
-    new Date(`${day}T00:00:00Z`),
-  );
+  return Temporal.PlainDate.from(day).toLocaleString(locale.value, { weekday: 'narrow' });
 }
 
 function weekdayFull(day: string): string {
-  return new Intl.DateTimeFormat(locale.value, {
+  return Temporal.PlainDate.from(day).toLocaleString(locale.value, {
     weekday: 'long',
     month: 'short',
     day: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(`${day}T00:00:00Z`));
+  });
 }
 
 const maxDayCount = computed(() =>

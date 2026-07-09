@@ -1,6 +1,8 @@
 import { and, eq } from 'drizzle-orm';
 import { caretakerAddSchema } from '#shared/schemas/caretaker';
 import type { PetCaretaker } from '#shared/types/domain';
+import { instantToIso } from '#shared/utils/datetime';
+import { Temporal } from '#shared/utils/temporal';
 import { firstRow, useDb } from '../../../../db';
 import { petCaretakers, users } from '../../../../db/schema';
 import { requirePetOwner } from '../../../../utils/petAccess';
@@ -42,7 +44,7 @@ export default defineEventHandler(async (event): Promise<PetCaretaker> => {
 
   await db
     .insert(petCaretakers)
-    .values({ petId: pet.id, userId: target.id, createdAt: new Date().toISOString() });
+    .values({ petId: pet.id, userId: target.id, createdAt: instantToIso(Temporal.Now.instant()) });
 
   setResponseStatus(event, 201);
   return target;

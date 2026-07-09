@@ -13,6 +13,7 @@ import { FetchError } from 'ofetch';
 import type { CareRecordWithActor, Need, NeedWithRecords } from '#shared/types/domain';
 import { compareDateOnly } from '#shared/utils/date';
 import { getMeasurementValue } from '#shared/utils/measurement';
+import { Temporal } from '#shared/utils/temporal';
 
 const props = withDefaults(
   defineProps<{
@@ -94,7 +95,7 @@ async function markAllDone(): Promise<void> {
       method: 'POST',
       body: {
         note: '',
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timezone: Temporal.Now.timeZoneId(),
         ...measurement,
       },
     });

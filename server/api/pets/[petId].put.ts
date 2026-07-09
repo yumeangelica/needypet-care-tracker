@@ -2,6 +2,8 @@ import { eq } from 'drizzle-orm';
 import { petSchema } from '#shared/schemas/pet';
 import type { Pet } from '#shared/types/domain';
 import { isFutureDateOnly } from '#shared/utils/date';
+import { instantToIso } from '#shared/utils/datetime';
+import { Temporal } from '#shared/utils/temporal';
 import { useDb } from '../../db';
 import { pets } from '../../db/schema';
 import { removeStoredImageQuietly } from '../../utils/imageStorage';
@@ -43,7 +45,7 @@ export default defineEventHandler(async (event): Promise<Pet> => {
             imageStorageKey: null,
           }
         : {}),
-      updatedAt: new Date().toISOString(),
+      updatedAt: instantToIso(Temporal.Now.instant()),
     })
     .where(eq(pets.id, pet.id))
     .returning();

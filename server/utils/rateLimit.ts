@@ -1,5 +1,8 @@
 import type { H3Event } from 'h3';
 import { getRequestIP, setResponseHeader } from 'h3';
+// Relative (not #shared): this module is imported directly from vitest specs,
+// where the Nuxt '#shared' alias is not registered.
+import { Temporal } from '../../shared/utils/temporal';
 import { tooManyRequests } from './errors';
 
 export interface RateLimitVerdict {
@@ -28,7 +31,12 @@ export function createRateLimiter(maxKeys = 10_000) {
     }
   }
 
-  function hit(key: string, max: number, windowMs: number, now = Date.now()): RateLimitVerdict {
+  function hit(
+    key: string,
+    max: number,
+    windowMs: number,
+    now = Temporal.Now.instant().epochMilliseconds,
+  ): RateLimitVerdict {
     const entry = windows.get(key);
     if (!entry || now >= entry.resetAt) {
       // Sweep lazily so the map can't grow unbounded from one-off keys.

@@ -1,5 +1,7 @@
 import { and, eq, gt } from 'drizzle-orm';
 import { confirmEmailSchema } from '#shared/schemas/user';
+import { instantToIso } from '#shared/utils/datetime';
+import { Temporal } from '#shared/utils/temporal';
 import { firstRow, useDb } from '../../db';
 import { users } from '../../db/schema';
 import { checkRateLimit, rateLimitIp } from '../../utils/rateLimit';
@@ -14,7 +16,7 @@ export default defineEventHandler(async (event) => {
 
   const input = await readValidatedBodyOr422(event, confirmEmailSchema);
   const db = useDb();
-  const now = new Date().toISOString();
+  const now = instantToIso(Temporal.Now.instant());
 
   const tokenHash = await hashToken(input.token);
   const user = firstRow(

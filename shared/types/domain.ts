@@ -7,6 +7,8 @@
  *   They are compared as strings, never shifted through a timezone.
  * - Care record `date` is a full UTC ISO-8601 timestamp; the acting user's
  *   IANA `timezone` is stored alongside it for audit context only.
+ * - These DTO fields stay strings on the wire. Temporal (via
+ *   `shared/utils/{date,datetime}.ts`) is only used to compute them server-side.
  */
 
 /** UI language stored on the user profile. Default is always 'en'. */

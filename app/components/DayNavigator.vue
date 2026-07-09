@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ChevronLeft, ChevronRight } from '@lucide/vue';
 import { addDaysDateOnly } from '#shared/utils/date';
+import { Temporal } from '#shared/utils/temporal';
 
 const props = defineProps<{
   modelValue: string; // YYYY-MM-DD, owner-local
@@ -13,18 +14,17 @@ const { t, locale } = useI18n();
 
 const isToday = computed(() => props.modelValue === props.ownerToday);
 
-// Date-only strings are formatted through UTC so the label never shifts
-// through the browser's timezone.
+// A PlainDate has no timezone, so the label can never shift through the
+// browser's local timezone.
 const dateLabel = computed(() => {
   if (isToday.value) {
     return t('common.today');
   }
-  return new Intl.DateTimeFormat(locale.value, {
+  return Temporal.PlainDate.from(props.modelValue).toLocaleString(locale.value, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(`${props.modelValue}T00:00:00Z`));
+  });
 });
 
 function changeDay(days: number): void {

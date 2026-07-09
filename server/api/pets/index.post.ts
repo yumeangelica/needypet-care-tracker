@@ -3,6 +3,8 @@ import type { PetListItem } from '#shared/types/domain';
 import { todayInTimeZone } from '#shared/utils/date';
 import { isFutureDateOnly } from '#shared/utils/date';
 import { DEFAULT_PET_IMAGE } from '#shared/utils/petImages';
+import { instantToIso } from '#shared/utils/datetime';
+import { Temporal } from '#shared/utils/temporal';
 import { useDb } from '../../db';
 import { pets } from '../../db/schema';
 import { toDomainPet } from '../../utils/mappers';
@@ -17,7 +19,7 @@ export default defineEventHandler(async (event): Promise<PetListItem> => {
   }
 
   const image = input.image ?? DEFAULT_PET_IMAGE;
-  const now = new Date().toISOString();
+  const now = instantToIso(Temporal.Now.instant());
   const createdRows = await useDb()
     .insert(pets)
     .values({

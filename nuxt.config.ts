@@ -80,6 +80,7 @@ export default defineNuxtConfig({
         '@lucide/vue',
         '@vue/devtools-core',
         '@vue/devtools-kit',
+        'temporal-polyfill',
         'vue-i18n',
         'zod',
       ],
