@@ -16,12 +16,13 @@ export default defineEventHandler(async (event) => {
   const db = useDb();
   const now = new Date().toISOString();
 
+  const tokenHash = await hashToken(input.token);
   const user = firstRow(
     await db
       .select({ id: users.id })
       .from(users)
       .where(
-        and(eq(users.emailConfirmToken, hashToken(input.token)), gt(users.emailConfirmExpiresAt, now)),
+        and(eq(users.emailConfirmToken, tokenHash), gt(users.emailConfirmExpiresAt, now)),
       ),
   );
   if (!user) {

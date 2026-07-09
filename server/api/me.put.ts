@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const emailChanged = email !== user.email;
-  const confirm = emailChanged ? createToken() : null;
+  const confirm = emailChanged ? await createToken() : null;
 
   const updatedRows = await db
     .update(users)

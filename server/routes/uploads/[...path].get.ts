@@ -1,5 +1,3 @@
-import { createReadStream } from 'node:fs';
-import { stat } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -28,16 +26,12 @@ export default defineEventHandler(async (event) => {
     notFound();
   }
 
-  try {
-    const info = await stat(filePath);
-    if (!info.isFile()) {
-      notFound();
-    }
-    setResponseHeader(event, 'Content-Type', contentType);
-    setResponseHeader(event, 'Content-Length', info.size);
-    setResponseHeader(event, 'Cache-Control', 'public, max-age=31536000, immutable');
-    return sendStream(event, createReadStream(filePath));
-  } catch {
+  const file = Bun.file(filePath);
+  if (!(await file.exists())) {
     notFound();
   }
+  setResponseHeader(event, 'Content-Type', contentType);
+  setResponseHeader(event, 'Content-Length', file.size);
+  setResponseHeader(event, 'Cache-Control', 'public, max-age=31536000, immutable');
+  return sendStream(event, file.stream());
 });

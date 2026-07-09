@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
 
   const user = firstRow(await db.select({ id: users.id }).from(users).where(eq(users.email, email)));
   if (user) {
-    const reset = createToken();
+    const reset = await createToken();
     await db
       .update(users)
       .set({

@@ -18,12 +18,13 @@ export default defineEventHandler(async (event) => {
   const db = useDb();
   const now = new Date().toISOString();
 
+  const tokenHash = await hashToken(input.token);
   const user = firstRow(
     await db
       .select({ id: users.id })
       .from(users)
       .where(
-        and(eq(users.passwordResetToken, hashToken(input.token)), gt(users.passwordResetExpiresAt, now)),
+        and(eq(users.passwordResetToken, tokenHash), gt(users.passwordResetExpiresAt, now)),
       ),
   );
   if (!user) {

@@ -56,13 +56,51 @@ Also in this pass:
 - `better-sqlite3` (+ `@types/better-sqlite3`) and `tsx` removed — local SQLite
   now uses `bun:sqlite` (via `drizzle-orm/bun-sqlite`); test toolchain + db scripts
   run under Bun.
-- `postgres` (postgres.js) removed — production Postgres now uses native `Bun.sql`
-  (via `drizzle-orm/bun-sql`), keeping `prepare: false` for the Supabase pooler.
+- `postgres` (postgres.js) removed during the bun-native pass. Postgres itself was
+  later dropped entirely (see "SQLite-only" below).
 - `vue-router` removed from `dependencies` — it is a direct dep of `nuxt` at the
   same range and had zero explicit imports (routing goes through Nuxt auto-imports).
 - `typescript` added as an explicit devDependency — the project runs `tsc` (via
   `vue-tsc` / `nuxt typecheck`) directly, so it is declared rather than relied on
   transitively. Node types come from `@types/bun` (no separate `@types/node`).
 
-The app is now bun-native end to end (runtime, both DB dialects, hashing, tests,
-scripts); Node is no longer required.
+The app is now bun-native end to end (runtime, DB, hashing, tests, scripts); Node
+is no longer required.
+
+## SQLite-only + Web Crypto + R2 — done (modernization pass)
+
+Removed the last legacy/dialect-split surfaces so the app is one dialect, fully
+Web-standard, and free to host:
+
+- [x] **Postgres removed; SQLite everywhere.** Deleted `schema.pg.ts`, the pg
+  migrations, `drizzle-pg.config.ts`, the `db:*:pg` scripts, and the `Bun.sql`
+  branch in `useDb()`. A dev-SQLite/prod-Postgres split invites dialect drift
+  (ILIKE, jsonb, date handling) and means testing a different engine than you
+  deploy. `schema.ts` is now a direct re-export of `schema.sqlite.ts`.
+- [x] **Turso/libSQL-ready for prod.** `useDb()` has a documented seam: set
+  `NUXT_DB_URL` to a `libsql://` Turso URL and plug in a `drizzle-orm/libsql`
+  client — **same SQLite dialect, same schema, same migrations**, zero drift.
+  `@libsql/client` is intentionally not added until a host is chosen. Turso free
+  tier is ~9 GB. This is the recommended prod DB path.
+- [x] **Full Web Crypto (no `node:crypto` in app code).** `server/utils/tokens.ts`
+  uses `crypto.getRandomValues` + `crypto.subtle.digest`; the digest-secret compare
+  in `daily-digest.post.ts` uses `subtle.digest` + a constant-time XOR (no
+  `timingSafeEqual`). Token helpers are now async.
+- [x] **Bun-native file I/O.** `LocalDiskStorage.put` → `Bun.write` (auto-creates
+  dirs); the `/uploads` route → `Bun.file` (`.exists()`/`.size`/`.stream()`).
+- [x] **Image hosting: Supabase → Cloudflare R2.** `R2Storage` (S3-compatible REST,
+  AWS SigV4 signed via Web Crypto HMAC — no SDK, no `node:crypto`) replaces
+  `SupabaseStorage`. R2 free tier: 10 GB + **zero egress** + no inactivity pause.
+  Public bucket for reads (unguessable UUID keys); `NUXT_UPLOADS_PROVIDER=r2` plus
+  `NUXT_UPLOADS_R2_*`. Dev stays local disk.
+
+## UX polish — done
+
+- [x] **Dashboard task-progress badge.** The home pet cards show each pet's
+  done/total care tasks for today (`TaskProgressBadge.vue` with a fill bar), so a
+  fully-completed pet reads as "All Done!" instead of a blank badge. The pets-list
+  endpoint returns both `todayTaskCount` (open) and `todayCompletedCount`.
+- [x] **Photo upload when creating a pet.** `PetImagePicker` now holds the chosen
+  file with a local preview during create and `PetForm` uploads it right after the
+  pet is created (edit still uploads immediately) — no more "add a photo after
+  saving" gap.

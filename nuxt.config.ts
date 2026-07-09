@@ -148,16 +148,18 @@ export default defineNuxtConfig({
       from: '',
       apiUrl: 'https://api.resend.com/emails',
     },
-    // Pet photo uploads. NUXT_UPLOADS_PROVIDER=supabase switches to Supabase
-    // Storage (a public bucket); the three NUXT_UPLOADS_SUPABASE_* vars must
+    // Pet photo uploads. NUXT_UPLOADS_PROVIDER=r2 switches to Cloudflare R2
+    // (a public bucket, S3-compatible API); the five NUXT_UPLOADS_R2_* vars must
     // all be set or the first upload throws. Local disk otherwise (dev).
     uploads: {
       provider: 'local',
       dir: '.data/uploads',
       maxBytes: 5 * 1024 * 1024,
-      supabaseUrl: '',
-      supabaseServiceKey: '',
-      supabaseBucket: '',
+      r2Endpoint: '', // https://<accountId>.r2.cloudflarestorage.com
+      r2AccessKeyId: '',
+      r2SecretAccessKey: '',
+      r2Bucket: '',
+      r2PublicBaseUrl: '', // https://pub-<hash>.r2.dev or a custom domain
     },
     // Daily digest of unfinished care tasks. NUXT_DIGEST_SECRET guards the cron
     // endpoint (empty = disabled, always 401); NUXT_DIGEST_HOUR is the local

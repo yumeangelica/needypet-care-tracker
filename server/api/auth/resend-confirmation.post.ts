@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     badRequest('Your email is already confirmed');
   }
 
-  const confirm = createToken();
+  const confirm = await createToken();
   await useDb()
     .update(users)
     .set({

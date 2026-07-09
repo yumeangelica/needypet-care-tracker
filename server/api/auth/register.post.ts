@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
   const now = new Date().toISOString();
   // Unconfirmed accounts stay fully usable — the confirmation link only
   // flips the badge in the profile. Only the token hash is stored.
-  const confirm = createToken();
+  const confirm = await createToken();
   const user = {
     id: crypto.randomUUID(),
     userName: input.userName,
