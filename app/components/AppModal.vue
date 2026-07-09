@@ -70,12 +70,27 @@ function onBackdropClick(event: MouseEvent): void {
 
 <style scoped>
 .app-modal {
-  width: min(92vw, 440px);
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(calc(100vw - 2rem), 440px);
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  margin: 0;
   padding: 0;
   border: 1px solid var(--color-card-edge);
   border-radius: var(--radius-lg);
   background: var(--color-card-bg);
+  box-sizing: border-box;
   box-shadow: var(--shadow-panel);
+  overflow: hidden;
+  transform: translate(-50%, -50%);
+}
+
+.app-modal-content {
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;
 }
 
 .app-modal::backdrop {
@@ -123,6 +138,8 @@ function onBackdropClick(event: MouseEvent): void {
 }
 
 .app-modal-body {
+  min-height: 0;
   padding: var(--space-card);
+  overflow-y: auto;
 }
 </style>

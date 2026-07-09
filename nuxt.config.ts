@@ -1,4 +1,43 @@
 import tailwindcss from '@tailwindcss/vite';
+import type { RollupLog, WarningHandlerWithDefault } from 'rollup';
+
+const ignoredSourcemapWarningPlugins = new Set([
+  '@tailwindcss/vite:generate:build',
+  'nuxt:module-preload-polyfill',
+]);
+
+type MutableViteConfig = {
+  build?: {
+    rollupOptions?: {
+      onwarn?: WarningHandlerWithDefault;
+    };
+  };
+};
+
+function isIgnoredSourcemapWarning(warning: RollupLog): boolean {
+  return Boolean(
+    warning.code === 'SOURCEMAP_BROKEN'
+      && warning.plugin
+      && ignoredSourcemapWarningPlugins.has(warning.plugin),
+  );
+}
+
+function withKnownSourcemapWarningFilter(
+  onwarn?: WarningHandlerWithDefault,
+): WarningHandlerWithDefault {
+  return (warning, warn) => {
+    if (isIgnoredSourcemapWarning(warning)) {
+      return;
+    }
+
+    if (onwarn) {
+      onwarn(warning, warn);
+      return;
+    }
+
+    warn(warning);
+  };
+}
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -6,8 +45,12 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['nuxt-auth-utils', '@vite-pwa/nuxt'],
   css: ['~/assets/css/main.css'],
-  // We use vue-i18n directly as a plugin (not @nuxtjs/i18n), so auto-import its
-  // Composition-API entry point to match how Nuxt composables are used elsewhere.
+  sourcemap: {
+    client: false,
+    server: false,
+  },
+  // vue-i18n is installed directly as a plugin (not @nuxtjs/i18n), so auto-import
+  // its Composition-API entry point to match how Nuxt composables are used elsewhere.
   imports: {
     presets: [{ from: 'vue-i18n', imports: ['useI18n'] }],
   },
@@ -15,12 +58,35 @@ export default defineNuxtConfig({
   // precache it and serve it as the navigation fallback when the network is down
   // (an SSR-only route has no cached document to fall back to).
   nitro: {
+    preset: 'bun',
     prerender: {
       routes: ['/offline'],
     },
   },
+  hooks: {
+    'vite:extendConfig'(config) {
+      const viteConfig = config as MutableViteConfig;
+      viteConfig.build ??= {};
+      viteConfig.build.rollupOptions ??= {};
+      viteConfig.build.rollupOptions.onwarn = withKnownSourcemapWarningFilter(
+        viteConfig.build.rollupOptions.onwarn,
+      );
+    },
+  },
   vite: {
     plugins: [tailwindcss()],
+    optimizeDeps: {
+      include: [
+        '@lucide/vue',
+        '@vue/devtools-core',
+        '@vue/devtools-kit',
+        'vue-i18n',
+        'zod',
+      ],
+    },
+    ssr: {
+      noExternal: ['zod'],
+    },
   },
   app: {
     head: {
