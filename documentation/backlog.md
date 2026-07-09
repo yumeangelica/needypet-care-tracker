@@ -94,6 +94,29 @@ Web-standard, and free to host:
   Public bucket for reads (unguessable UUID keys); `NUXT_UPLOADS_PROVIDER=r2` plus
   `NUXT_UPLOADS_R2_*`. Dev stays local disk.
 
+## Temporal API — done (modernization pass)
+
+Replaced native `Date` with the TC39 **Temporal** API for all date/time logic.
+Despite the dependency-reduction ethos above, `temporal-polyfill` (~15–20 kB, MIT,
+Temporal is Stage 4) was added deliberately: Bun 1.3 ships no native `Temporal`
+yet (verified `typeof Temporal === 'undefined'`) and the browser floor predates
+it, so the polyfill is a **droppable bridge**. It is imported only through
+`shared/utils/temporal.ts` — when the runtime + browser floor ship native
+Temporal, dropping the dep is a one-line change there, no consumer edits.
+
+- [x] **Seam rewrite.** `shared/utils/{date,datetime}.ts` internals now run on
+  Temporal (`PlainDate`, `PlainDateTime`, `ZonedDateTime`, `Instant`). Public
+  signatures stay string-in/string-out, so the DB (`text` columns), JSON DTOs, and
+  zod schemas are untouched and the existing test assertions stayed as the
+  regression net. The hand-rolled DST resolver (`tzOffsetMs` double-offset dance)
+  and the `new Date(\`${day}T00:00:00Z\`)` + `timeZone:'UTC'` UI idiom are gone —
+  `PlainDate` has no zone, so date-only labels can't shift.
+- [x] **`Date` eliminated everywhere** in app/server/shared (audit stamps, token
+  expiry, rollover, rate-limit window, S3 `x-amz-date`, the owner-tz ticker) and in
+  test fixtures. `instantToIso` pins millisecond precision so ISO output stays
+  byte-identical to the old `toISOString()`. `Intl.supportedValuesOf('timeZone')`
+  stays for the tz allowlist (Temporal has no zone-list API).
+
 ## UX polish — done
 
 - [x] **Dashboard task-progress badge.** The home pet cards show each pet's

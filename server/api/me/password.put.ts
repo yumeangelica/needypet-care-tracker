@@ -1,5 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { passwordChangeSchema } from '#shared/schemas/user';
+import { instantToIso } from '#shared/utils/datetime';
+import { Temporal } from '#shared/utils/temporal';
 import { useDb } from '../../db';
 import { users } from '../../db/schema';
 import { hashUserPassword, verifyUserPassword } from '../../utils/password';
@@ -17,7 +19,7 @@ export default defineEventHandler(async (event) => {
     .update(users)
     .set({
       passwordHash: await hashUserPassword(input.newPassword),
-      updatedAt: new Date().toISOString(),
+      updatedAt: instantToIso(Temporal.Now.instant()),
     })
     .where(eq(users.id, user.id));
 

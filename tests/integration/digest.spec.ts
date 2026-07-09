@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { addDaysDateOnly, hourInTimeZone, todayInTimeZone } from '../../shared/utils/date';
+import { Temporal } from '../../shared/utils/temporal';
 import {
   addCaretaker,
   api,
@@ -26,7 +27,7 @@ const SEND_HOUR = 18;
  * has no UTC, which the app rejects as a user timezone anyway.
  */
 function timezoneWithLocalHourBetween(min: number, max: number): string {
-  const now = new Date();
+  const now = Temporal.Now.instant();
   for (const tz of Intl.supportedValuesOf('timeZone')) {
     const hour = hourInTimeZone(tz, now);
     if (hour >= min && hour <= max) {

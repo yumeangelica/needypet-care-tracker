@@ -2,6 +2,8 @@ import { eq } from 'drizzle-orm';
 import { needUpdateSchema } from '#shared/schemas/need';
 import type { Need } from '#shared/types/domain';
 import { hasExactlyOneMeasurement } from '#shared/utils/measurement';
+import { instantToIso } from '#shared/utils/datetime';
+import { Temporal } from '#shared/utils/temporal';
 import { firstRow, useDb } from '../../../../db';
 import { needs } from '../../../../db/schema';
 import { toDomainNeed, toMeasurementColumns } from '../../../../utils/mappers';
@@ -45,7 +47,7 @@ export default defineEventHandler(async (event): Promise<Need> => {
       category: input.category,
       description: input.description,
       ...measurement,
-      updatedAt: new Date().toISOString(),
+      updatedAt: instantToIso(Temporal.Now.instant()),
     })
     .where(eq(needs.id, need.id))
     .returning();

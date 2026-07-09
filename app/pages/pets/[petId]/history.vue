@@ -5,6 +5,7 @@ import { todayInTimeZone } from '#shared/utils/date';
 import { addDaysDateOnly } from '#shared/utils/date';
 import { formatTimeInTimeZone, groupRecordsByDay } from '#shared/utils/datetime';
 import { getMeasurementValue } from '#shared/utils/measurement';
+import { Temporal } from '#shared/utils/temporal';
 
 definePageMeta({ middleware: 'auth' });
 
@@ -57,8 +58,8 @@ const ownerToday = computed(() => todayInTimeZone(ownerTimezone.value));
 
 const groups = computed(() => groupRecordsByDay(allRecords.value, ownerTimezone.value));
 
-// Day headings use UTC formatting on the date-only string so the browser's
-// timezone never shifts the label (same technique as DayNavigator).
+// Day headings use PlainDate (no timezone) on the date-only string so the
+// browser's timezone never shifts the label (same technique as DayNavigator).
 function dayLabel(day: string): string {
   if (day === ownerToday.value) {
     return t('common.today');
@@ -67,20 +68,19 @@ function dayLabel(day: string): string {
     return t('records.yesterday');
   }
   const sameYear = day.slice(0, 4) === ownerToday.value.slice(0, 4);
-  return new Intl.DateTimeFormat(locale.value, {
+  return Temporal.PlainDate.from(day).toLocaleString(locale.value, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
     ...(sameYear ? {} : { year: 'numeric' }),
-    timeZone: 'UTC',
-  }).format(new Date(`${day}T00:00:00Z`));
+  });
 }
 
 function entryUnit(entry: PetHistoryEntry): string {
   return entry.duration ? 'min' : entry.quantity?.unit ?? '';
 }
 
-const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const browserTimezone = Temporal.Now.timeZoneId();
 const showTzHint = computed(() => browserTimezone !== ownerTimezone.value);
 </script>
 

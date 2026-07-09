@@ -3,6 +3,7 @@ import { Eye, EyeOff, PawPrint } from '@lucide/vue';
 import { FetchError } from 'ofetch';
 import { z } from 'zod';
 import { PASSWORD_RULES, registerSchema } from '#shared/schemas/user';
+import { Temporal } from '#shared/utils/temporal';
 
 definePageMeta({ layout: 'auth' });
 
@@ -18,7 +19,7 @@ const errorMessage = ref('');
 const fieldErrors = ref<Record<string, string[]>>({});
 
 // Best default: the browser's own IANA timezone; editable later in profile.
-const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const timezone = Temporal.Now.timeZoneId();
 
 const passwordChecks = computed(() =>
   PASSWORD_RULES.map((rule) => ({ ...rule, valid: rule.test(newPassword.value) })),

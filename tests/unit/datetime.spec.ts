@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Temporal } from '../../shared/utils/temporal';
 import { todayInTimeZone } from '../../shared/utils/date';
 import {
   dateOnlyInTimeZone,
@@ -46,7 +47,7 @@ describe('zonedDateTimeToUtcIso', () => {
     // Helsinki 2026-03-29: clocks jump from 03:00 to 04:00 (03:30 never happens).
     const iso = zonedDateTimeToUtcIso('2026-03-29', '03:30', 'Europe/Helsinki');
     expect(Number.isNaN(Date.parse(iso))).toBe(false);
-    expect(todayInTimeZone('Europe/Helsinki', new Date(iso))).toBe('2026-03-29');
+    expect(todayInTimeZone('Europe/Helsinki', Temporal.Instant.from(iso))).toBe('2026-03-29');
   });
 
   it('resolves an ambiguous fall-back time to one of its two instants', () => {
@@ -57,7 +58,7 @@ describe('zonedDateTimeToUtcIso', () => {
 
   it('round-trips through todayInTimeZone for an ordinary time', () => {
     const iso = zonedDateTimeToUtcIso('2026-07-06', '23:45', 'Europe/Helsinki');
-    expect(todayInTimeZone('Europe/Helsinki', new Date(iso))).toBe('2026-07-06');
+    expect(todayInTimeZone('Europe/Helsinki', Temporal.Instant.from(iso))).toBe('2026-07-06');
   });
 });
 

@@ -1,5 +1,7 @@
 import { eq, or } from 'drizzle-orm';
 import { registerSchema } from '#shared/schemas/user';
+import { instantToIso } from '#shared/utils/datetime';
+import { Temporal } from '#shared/utils/temporal';
 import { firstRow, useDb } from '../../db';
 import { users } from '../../db/schema';
 import { confirmEmailMessage, useMailer } from '../../utils/mailer';
@@ -25,7 +27,7 @@ export default defineEventHandler(async (event) => {
     badRequest(existing.userName === input.userName ? 'Username already exists' : 'Email already exists');
   }
 
-  const now = new Date().toISOString();
+  const now = instantToIso(Temporal.Now.instant());
   // Unconfirmed accounts stay fully usable — the confirmation link only
   // flips the badge in the profile. Only the token hash is stored.
   const confirm = await createToken();

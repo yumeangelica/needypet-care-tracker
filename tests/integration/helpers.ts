@@ -5,6 +5,8 @@ import { type BunSQLiteDatabase, drizzle } from 'drizzle-orm/bun-sqlite';
 // NUXT_DB_URL inherited from the shell can't flip this process to a remote DB.
 import * as schema from '../../server/db/schema.sqlite';
 import { hashToken } from '../../server/utils/tokens';
+import { instantToIso } from '../../shared/utils/datetime';
+import { Temporal } from '../../shared/utils/temporal';
 
 const { careRecords, needs, petCaretakers, pets, users } = schema;
 
@@ -141,7 +143,7 @@ export async function createUser(
   const password = overrides.password ?? TEST_PASSWORD;
   const timezone = overrides.timezone ?? 'Europe/Helsinki';
   const locale = overrides.locale ?? 'en';
-  const now = new Date().toISOString();
+  const now = instantToIso(Temporal.Now.instant());
   const id = crypto.randomUUID();
   await testDb().insert(users).values({
     id,
@@ -173,7 +175,7 @@ export async function createPet(
   ownerId: string,
   overrides: Partial<{ name: string; lastRolledNeedDate: string | null }> = {},
 ): Promise<{ id: string; name: string }> {
-  const now = new Date().toISOString();
+  const now = instantToIso(Temporal.Now.instant());
   const id = crypto.randomUUID();
   const name = overrides.name ?? uniqueName('pet');
   await testDb().insert(pets).values({
@@ -195,7 +197,7 @@ export async function createPet(
 export async function addCaretaker(petId: string, userId: string): Promise<void> {
   await testDb()
     .insert(petCaretakers)
-    .values({ petId, userId, createdAt: new Date().toISOString() });
+    .values({ petId, userId, createdAt: instantToIso(Temporal.Now.instant()) });
 }
 
 export interface Measurement {
@@ -216,7 +218,7 @@ export async function createNeed(
     isActive?: boolean;
   },
 ): Promise<{ id: string }> {
-  const now = new Date().toISOString();
+  const now = instantToIso(Temporal.Now.instant());
   const id = crypto.randomUUID();
   const measurement = overrides.duration
     ? { durationValue: overrides.duration.value, durationUnit: overrides.duration.unit }
@@ -246,7 +248,7 @@ export async function createRecord(opts: {
   date?: string;
   note?: string;
 }): Promise<{ id: string }> {
-  const now = new Date().toISOString();
+  const now = instantToIso(Temporal.Now.instant());
   const id = crypto.randomUUID();
   const measurement = opts.duration
     ? { durationValue: opts.duration.value, durationUnit: opts.duration.unit }
@@ -300,7 +302,7 @@ const HOUR_MS = 60 * 60_000;
 export async function plantEmailConfirmToken(
   userId: string,
   rawToken: string,
-  expiresAt = new Date(Date.now() + HOUR_MS).toISOString(),
+  expiresAt = instantToIso(Temporal.Now.instant().add({ hours: 1 })),
 ): Promise<void> {
   await testDb()
     .update(users)
@@ -311,7 +313,7 @@ export async function plantEmailConfirmToken(
 export async function plantPasswordResetToken(
   userId: string,
   rawToken: string,
-  expiresAt = new Date(Date.now() + HOUR_MS).toISOString(),
+  expiresAt = instantToIso(Temporal.Now.instant().add({ hours: 1 })),
 ): Promise<void> {
   await testDb()
     .update(users)

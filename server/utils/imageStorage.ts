@@ -1,5 +1,9 @@
 import { rm } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
+// Relative (not #shared): this module is imported directly from vitest specs,
+// where the Nuxt '#shared' alias is not registered.
+import { instantToIso } from '../../shared/utils/datetime';
+import { Temporal } from '../../shared/utils/temporal';
 
 /**
  * Pet image storage seam, mirroring the mailer pattern: local disk for dev,
@@ -102,7 +106,7 @@ export class R2Storage implements ImageStorage {
     body: Uint8Array,
     contentType?: string,
   ): Promise<Response> {
-    const now = new Date();
+    const now = Temporal.Now.instant();
     const amzDate = toAmzDate(now); // 20260709T120000Z
     const dateStamp = amzDate.slice(0, 8); // 20260709
     const region = 'auto';
@@ -166,8 +170,9 @@ function encodeS3Key(key: string): string {
   return key.split('/').map(encodeURIComponent).join('/');
 }
 
-function toAmzDate(date: Date): string {
-  return date.toISOString().replace(/[:-]|\.\d{3}/g, '');
+function toAmzDate(instant: Temporal.Instant): string {
+  // SigV4 wants the compact basic form: 20260709T120000Z (no separators, no ms).
+  return instantToIso(instant).replace(/[:-]|\.\d{3}/g, '');
 }
 
 function toHex(bytes: Uint8Array): string {

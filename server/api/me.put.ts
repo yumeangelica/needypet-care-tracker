@@ -1,5 +1,7 @@
 import { and, eq, ne, or } from 'drizzle-orm';
 import { profileUpdateSchema } from '#shared/schemas/user';
+import { instantToIso } from '#shared/utils/datetime';
+import { Temporal } from '#shared/utils/temporal';
 import { firstRow, useDb } from '../db';
 import { users } from '../db/schema';
 import { confirmEmailMessage, useMailer } from '../utils/mailer';
@@ -52,7 +54,7 @@ export default defineEventHandler(async (event) => {
             emailConfirmExpiresAt: expiryFromNow(24),
           }
         : {}),
-      updatedAt: new Date().toISOString(),
+      updatedAt: instantToIso(Temporal.Now.instant()),
     })
     .where(eq(users.id, user.id))
     .returning();

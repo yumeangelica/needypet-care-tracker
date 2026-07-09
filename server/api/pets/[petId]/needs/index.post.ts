@@ -2,6 +2,8 @@ import { and, eq } from 'drizzle-orm';
 import { MAX_NEEDS_PER_DAY, needSchema } from '#shared/schemas/need';
 import type { Need } from '#shared/types/domain';
 import { compareDateOnly, todayInTimeZone } from '#shared/utils/date';
+import { instantToIso } from '#shared/utils/datetime';
+import { Temporal } from '#shared/utils/temporal';
 import { useDb } from '../../../../db';
 import { needs } from '../../../../db/schema';
 import { toDomainNeed, toMeasurementColumns } from '../../../../utils/mappers';
@@ -33,7 +35,7 @@ export default defineEventHandler(async (event): Promise<Need> => {
     badRequest('Maximum number of needs for the day reached');
   }
 
-  const now = new Date().toISOString();
+  const now = instantToIso(Temporal.Now.instant());
   const createdRows = await db
     .insert(needs)
     .values({

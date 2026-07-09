@@ -6,6 +6,11 @@
  * Fully Web-standard: Web Crypto (getRandomValues + subtle.digest), no node:*.
  */
 
+// Relative (not #shared): this module is imported directly from vitest specs,
+// where the Nuxt '#shared' alias is not registered.
+import { instantToIso } from '../../shared/utils/datetime';
+import { Temporal } from '../../shared/utils/temporal';
+
 /** 32 random bytes as a 43-char url-safe (base64url, unpadded) string. */
 export async function createToken(): Promise<{ token: string; tokenHash: string }> {
   const token = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
@@ -18,7 +23,7 @@ export async function hashToken(token: string): Promise<string> {
 }
 
 export function expiryFromNow(hours: number): string {
-  return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+  return instantToIso(Temporal.Now.instant().add({ hours }));
 }
 
 function toBase64Url(bytes: Uint8Array): string {

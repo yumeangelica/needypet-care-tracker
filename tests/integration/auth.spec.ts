@@ -13,6 +13,8 @@ import {
   uniqueIp,
   uniqueName,
 } from './helpers';
+import { instantToIso } from '../../shared/utils/datetime';
+import { Temporal } from '../../shared/utils/temporal';
 
 const TZ = 'Europe/Helsinki';
 
@@ -167,7 +169,11 @@ describe('confirm email', () => {
   it('rejects an expired token', async () => {
     const user = await createUser({ emailConfirmed: false });
     const rawToken = `expired-${crypto.randomUUID()}`;
-    await plantEmailConfirmToken(user.id, rawToken, new Date(Date.now() - 60_000).toISOString());
+    await plantEmailConfirmToken(
+      user.id,
+      rawToken,
+      instantToIso(Temporal.Now.instant().subtract({ minutes: 1 })),
+    );
 
     const res = await api('/api/auth/confirm-email', { method: 'POST', body: { token: rawToken } });
     expect(res.status).toBe(400);

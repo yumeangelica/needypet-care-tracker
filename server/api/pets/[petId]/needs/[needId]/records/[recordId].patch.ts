@@ -4,7 +4,8 @@ import type { Need } from '#shared/types/domain';
 import { canMutateRecord, validateRecordMutation } from '#shared/utils/careRules';
 import type { RecordMutationRejection } from '#shared/utils/careRules';
 import { todayInTimeZone } from '#shared/utils/date';
-import { zonedDateTimeToUtcIso } from '#shared/utils/datetime';
+import { instantToIso, zonedDateTimeToUtcIso } from '#shared/utils/datetime';
+import { Temporal } from '#shared/utils/temporal';
 import { firstRow, useDb, withTransaction } from '../../../../../../db';
 import { careRecords, needs, users } from '../../../../../../db/schema';
 import { recomputeNeedCompletion } from '../../../../../../utils/careRecords';
@@ -52,7 +53,7 @@ export default defineEventHandler(async (event): Promise<Need> => {
     badRequest(REJECTION_MESSAGES[rejection]);
   }
 
-  const now = new Date().toISOString();
+  const now = instantToIso(Temporal.Now.instant());
 
   // Manual time correction, wall-clock in the OWNER's timezone. Must stay
   // inside the record's care day and not move into the future.
@@ -66,7 +67,7 @@ export default defineEventHandler(async (event): Promise<Need> => {
     if (recordDate > now) {
       badRequest('Cannot log care in the future');
     }
-    if (todayInTimeZone(ownerTimezone, new Date(recordDate)) !== needRow.dateFor) {
+    if (todayInTimeZone(ownerTimezone, Temporal.Instant.from(recordDate)) !== needRow.dateFor) {
       badRequest('Time must fall within the care day');
     }
   }

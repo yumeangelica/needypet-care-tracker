@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { addDaysDateOnly, todayInTimeZone } from '../../shared/utils/date';
 import { zonedDateTimeToUtcIso } from '../../shared/utils/datetime';
+import { Temporal } from '../../shared/utils/temporal';
 import {
   api,
   createNeed,
@@ -15,9 +16,7 @@ import {
 } from './helpers';
 
 function hourIn(tz: string): number {
-  return Number(
-    new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', hour12: false }).format(new Date()),
-  );
+  return Temporal.Now.instant().toZonedDateTimeISO(tz).hour;
 }
 
 /**

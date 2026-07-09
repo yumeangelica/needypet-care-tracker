@@ -1,5 +1,7 @@
 import { eq } from 'drizzle-orm';
 import type { Need } from '#shared/types/domain';
+import { instantToIso } from '#shared/utils/datetime';
+import { Temporal } from '#shared/utils/temporal';
 import { firstRow, useDb } from '../../../../../db';
 import { needs } from '../../../../../db/schema';
 import { toDomainNeed } from '../../../../../utils/mappers';
@@ -28,7 +30,7 @@ export default defineEventHandler(async (event): Promise<Need> => {
 
   const updatedRows = await db
     .update(needs)
-    .set({ isActive: !need.isActive, updatedAt: new Date().toISOString() })
+    .set({ isActive: !need.isActive, updatedAt: instantToIso(Temporal.Now.instant()) })
     .where(eq(needs.id, need.id))
     .returning();
 

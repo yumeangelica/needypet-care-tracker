@@ -1,5 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { canMutateRecord } from '#shared/utils/careRules';
+import { instantToIso } from '#shared/utils/datetime';
+import { Temporal } from '#shared/utils/temporal';
 import { firstRow, useDb, withTransaction } from '../../../../../../db';
 import { careRecords, needs } from '../../../../../../db/schema';
 import { recomputeNeedCompletion } from '../../../../../../utils/careRecords';
@@ -39,7 +41,7 @@ export default defineEventHandler(async (event) => {
     badRequest('Care history for rolled-over days is frozen');
   }
 
-  const now = new Date().toISOString();
+  const now = instantToIso(Temporal.Now.instant());
   await withTransaction(async (tx) => {
     await tx.delete(careRecords).where(eq(careRecords.id, record.id));
     await recomputeNeedCompletion(tx, needRow, now);

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { Temporal } from '../../shared/utils/temporal';
 import {
   addDaysDateOnly,
   compareDateOnly,
@@ -37,7 +38,7 @@ describe('isValidDateOnly', () => {
 
 describe('todayInTimeZone', () => {
   // 11:00 UTC straddles the date line: UTC+14 is already tomorrow.
-  const instant = new Date('2026-01-01T11:00:00Z');
+  const instant = Temporal.Instant.from('2026-01-01T11:00:00Z');
 
   it('computes the local calendar day for extreme timezones', () => {
     expect(todayInTimeZone('Pacific/Kiritimati', instant)).toBe('2026-01-02'); // UTC+14
@@ -46,7 +47,7 @@ describe('todayInTimeZone', () => {
   });
 
   it('handles days near UTC midnight', () => {
-    const nearMidnight = new Date('2026-06-30T22:30:00Z');
+    const nearMidnight = Temporal.Instant.from('2026-06-30T22:30:00Z');
     expect(todayInTimeZone('Europe/Helsinki', nearMidnight)).toBe('2026-07-01'); // UTC+3 in summer
     expect(todayInTimeZone('America/New_York', nearMidnight)).toBe('2026-06-30'); // UTC-4 in summer
   });
@@ -58,7 +59,7 @@ describe('todayInTimeZone', () => {
 
 describe('hourInTimeZone', () => {
   // 11:00 UTC: local hour shifts by each zone's offset.
-  const instant = new Date('2026-01-01T11:00:00Z');
+  const instant = Temporal.Instant.from('2026-01-01T11:00:00Z');
 
   it('computes the local hour for offset timezones', () => {
     expect(hourInTimeZone('Europe/London', instant)).toBe(11); // UTC+0 in winter
@@ -68,7 +69,7 @@ describe('hourInTimeZone', () => {
   });
 
   it('normalizes midnight to 0', () => {
-    const midnightUtc = new Date('2026-01-01T00:00:00Z');
+    const midnightUtc = Temporal.Instant.from('2026-01-01T00:00:00Z');
     expect(hourInTimeZone('Europe/London', midnightUtc)).toBe(0);
   });
 

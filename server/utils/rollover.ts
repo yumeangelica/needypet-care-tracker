@@ -1,6 +1,8 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { todayInTimeZone } from '#shared/utils/date';
+import { instantToIso } from '#shared/utils/datetime';
 import { computeRollover } from '#shared/utils/rollover';
+import { Temporal } from '#shared/utils/temporal';
 import { firstRow, withTransaction } from '../db';
 import { needs, pets } from '../db/schema';
 import { toDomainNeed, toMeasurementColumns } from './mappers';
@@ -44,7 +46,7 @@ export async function rollPetNeedsIfDue(pet: PetRow, ownerTimezone: string): Pro
       .where(and(eq(needs.petId, pet.id), eq(needs.archived, false)));
     const plan = computeRollover(openRows.map(toDomainNeed), today);
 
-    const now = new Date().toISOString();
+    const now = instantToIso(Temporal.Now.instant());
     if (plan.archiveIds.length > 0) {
       await tx
         .update(needs)

@@ -90,10 +90,10 @@ interpolation are handled by vue-i18n (e.g. task counts, care-team announcements
   payload), so the server and client render the same language with no
   hydration-time flicker. Signed-out pages (landing / login / register) are
   always English.
-- `<html lang>` and the in-app `Intl.DateTimeFormat` date/weekday labels follow
-  the active locale; the PWA manifest `lang` stays `en` (it is generated once at
-  build time). The daily digest email is localized to the recipient's locale;
-  confirmation/reset emails stay English.
+- `<html lang>` and the in-app date/weekday labels (formatted via Temporal's
+  locale-aware `toLocaleString`) follow the active locale; the PWA manifest `lang`
+  stays `en` (it is generated once at build time). The daily digest email is
+  localized to the recipient's locale; confirmation/reset emails stay English.
 - A unit test (`tests/unit/i18n.spec.ts`) enforces en/fi key parity, so a new key
   added to one locale but not the other fails the suite.
 

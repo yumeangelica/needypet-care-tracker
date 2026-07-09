@@ -1,7 +1,9 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import { hourInTimeZone, todayInTimeZone } from '#shared/utils/date';
+import { instantToIso } from '#shared/utils/datetime';
 import type { DigestPetSection } from '#shared/utils/digest';
 import { shouldSendDigestNow } from '#shared/utils/digest';
+import { Temporal } from '#shared/utils/temporal';
 import { useDb } from '../../db';
 import { needs, petCaretakers, pets, users } from '../../db/schema';
 import { dailyDigestMessage, useMailer } from '../../utils/mailer';
@@ -80,7 +82,7 @@ export default defineEventHandler(async (event) => {
       // Stamp only after a successful send so a mailer outage retries next run.
       await db
         .update(users)
-        .set({ lastDigestDate: localDate, updatedAt: new Date().toISOString() })
+        .set({ lastDigestDate: localDate, updatedAt: instantToIso(Temporal.Now.instant()) })
         .where(eq(users.id, user.id));
       sent += 1;
     } catch (error) {
