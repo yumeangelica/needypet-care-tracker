@@ -124,7 +124,6 @@ export default {
     keepPet: 'Säilytä {name}',
     removeForGood: 'Poista lopullisesti',
     // Pet form
-    photoAfterSaving: 'Voit lisätä oman valokuvan tallennuksen jälkeen.',
     name: 'Nimi',
     namePlaceholder: 'Mikä on sen nimi?',
     speciesOptional: 'Laji (valinnainen)',

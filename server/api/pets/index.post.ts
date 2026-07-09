@@ -44,5 +44,6 @@ export default defineEventHandler(async (event): Promise<PetListItem> => {
     owner: { id: user.id, userName: user.userName, timezone: user.timezone },
     isOwner: true,
     todayTaskCount: 0,
+    todayCompletedCount: 0,
   };
 });

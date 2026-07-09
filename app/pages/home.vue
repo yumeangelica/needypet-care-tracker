@@ -8,14 +8,8 @@ const { data: allPets, status } = await useFetch<PetListItem[]>('/api/pets', {
   default: () => [],
 });
 
-const { t } = useI18n();
-
 const ownPets = computed(() => allPets.value.filter((pet) => pet.isOwner));
 const caredPets = computed(() => allPets.value.filter((pet) => !pet.isOwner));
-
-function taskLabel(count: number): string {
-  return t('pets.tasksToday', count, { named: { count } });
-}
 </script>
 
 <template>
@@ -45,10 +39,15 @@ function taskLabel(count: number): string {
               <PetStickerTile :image="pet.image" :pet-name="pet.name" size="md" />
               <h2 class="pet-name">{{ pet.name }}</h2>
               <span
-                class="task-pill"
-                :style="{ visibility: pet.todayTaskCount > 0 ? 'visible' : 'hidden' }"
+                class="task-badge-slot"
+                :style="{
+                  visibility: pet.todayTaskCount + pet.todayCompletedCount > 0 ? 'visible' : 'hidden',
+                }"
               >
-                {{ taskLabel(pet.todayTaskCount) }}
+                <TaskProgressBadge
+                  :done="pet.todayCompletedCount"
+                  :total="pet.todayTaskCount + pet.todayCompletedCount"
+                />
               </span>
             </button>
           </li>
@@ -62,10 +61,15 @@ function taskLabel(count: number): string {
                 <PetStickerTile :image="pet.image" :pet-name="pet.name" size="md" />
                 <h3 class="pet-name">{{ pet.name }}</h3>
                 <span
-                  class="task-pill"
-                  :style="{ visibility: pet.todayTaskCount > 0 ? 'visible' : 'hidden' }"
+                  class="task-badge-slot"
+                  :style="{
+                    visibility: pet.todayTaskCount + pet.todayCompletedCount > 0 ? 'visible' : 'hidden',
+                  }"
                 >
-                  {{ taskLabel(pet.todayTaskCount) }}
+                  <TaskProgressBadge
+                    :done="pet.todayCompletedCount"
+                    :total="pet.todayTaskCount + pet.todayCompletedCount"
+                  />
                 </span>
               </button>
             </li>
@@ -169,20 +173,13 @@ function taskLabel(count: number): string {
   text-align: center;
 }
 
-.task-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: calc(2 * 1.4em + 6px);
+/* Full-width footer slot; the badge component owns its own look/height so the
+   card stays the same size whether the badge is visible or hidden. */
+.task-badge-slot {
+  display: flex;
+  width: 100%;
   max-width: 100%;
   margin-top: auto;
-  padding: 3px 12px;
-  border-radius: var(--radius-pill);
-  background: var(--color-surface-control);
-  color: var(--color-primary-foreground-strong);
-  font-size: 0.7rem;
-  line-height: 1.4;
-  text-align: center;
 }
 
 .loading-note,

@@ -90,7 +90,10 @@ export interface CareRecord extends MeasurementShape {
 export interface PetListItem extends Pet {
   owner: { id: string; userName: string; timezone: string };
   isOwner: boolean;
+  /** Open (unfinished) care tasks still on the owner's local today. */
   todayTaskCount: number;
+  /** Completed care tasks on the owner's local today (badge total = open + done). */
+  todayCompletedCount: number;
 }
 
 /** Care record with its author's display name resolved (null = deleted account). */
