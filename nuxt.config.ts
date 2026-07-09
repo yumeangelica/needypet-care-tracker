@@ -1,4 +1,43 @@
 import tailwindcss from '@tailwindcss/vite';
+import type { RollupLog, WarningHandlerWithDefault } from 'rollup';
+
+const ignoredSourcemapWarningPlugins = new Set([
+  '@tailwindcss/vite:generate:build',
+  'nuxt:module-preload-polyfill',
+]);
+
+type MutableViteConfig = {
+  build?: {
+    rollupOptions?: {
+      onwarn?: WarningHandlerWithDefault;
+    };
+  };
+};
+
+function isIgnoredSourcemapWarning(warning: RollupLog): boolean {
+  return Boolean(
+    warning.code === 'SOURCEMAP_BROKEN'
+      && warning.plugin
+      && ignoredSourcemapWarningPlugins.has(warning.plugin),
+  );
+}
+
+function withKnownSourcemapWarningFilter(
+  onwarn?: WarningHandlerWithDefault,
+): WarningHandlerWithDefault {
+  return (warning, warn) => {
+    if (isIgnoredSourcemapWarning(warning)) {
+      return;
+    }
+
+    if (onwarn) {
+      onwarn(warning, warn);
+      return;
+    }
+
+    warn(warning);
+  };
+}
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -6,6 +45,10 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['nuxt-auth-utils', '@vite-pwa/nuxt'],
   css: ['~/assets/css/main.css'],
+  sourcemap: {
+    client: false,
+    server: false,
+  },
   // vue-i18n is installed directly as a plugin (not @nuxtjs/i18n), so auto-import
   // its Composition-API entry point to match how Nuxt composables are used elsewhere.
   imports: {
@@ -18,6 +61,16 @@ export default defineNuxtConfig({
     preset: 'bun',
     prerender: {
       routes: ['/offline'],
+    },
+  },
+  hooks: {
+    'vite:extendConfig'(config) {
+      const viteConfig = config as MutableViteConfig;
+      viteConfig.build ??= {};
+      viteConfig.build.rollupOptions ??= {};
+      viteConfig.build.rollupOptions.onwarn = withKnownSourcemapWarningFilter(
+        viteConfig.build.rollupOptions.onwarn,
+      );
     },
   },
   vite: {
