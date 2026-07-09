@@ -49,21 +49,24 @@ export default defineEventHandler(async (event): Promise<PetListItem[]> => {
     }
   }
 
-  // Today's open tasks per pet, where "today" is the owner's local day.
-  const openNeeds = await db
-    .select({ petId: needs.petId, dateFor: needs.dateFor })
+  // Today's tasks per pet (open + completed, non-archived), where "today" is the
+  // owner's local day. Both states power the dashboard progress badge (done/total).
+  const todayNeeds = await db
+    .select({ petId: needs.petId, dateFor: needs.dateFor, completed: needs.completed })
     .from(needs)
     .where(
       and(
         inArray(needs.petId, allPets.map((pet) => pet.id)),
         eq(needs.archived, false),
-        eq(needs.completed, false),
       ),
     );
 
   return allPets.map((pet) => {
     const owner = owners.get(pet.ownerId);
     const ownerToday = owner ? todayInTimeZone(owner.timezone) : null;
+    const petTodayNeeds = todayNeeds.filter(
+      (need) => need.petId === pet.id && need.dateFor === ownerToday,
+    );
     return {
       id: pet.id,
       ownerId: pet.ownerId,
@@ -78,9 +81,10 @@ export default defineEventHandler(async (event): Promise<PetListItem[]> => {
       updatedAt: pet.updatedAt,
       owner: owner ?? { id: pet.ownerId, userName: 'Unknown', timezone: 'UTC' },
       isOwner: pet.ownerId === user.id,
-      todayTaskCount: openNeeds.filter(
-        (need) => need.petId === pet.id && need.dateFor === ownerToday,
-      ).length,
+      // Open tasks still today (unchanged meaning: drives the digest too).
+      todayTaskCount: petTodayNeeds.filter((need) => !need.completed).length,
+      // Completed today; total for the badge = todayTaskCount + todayCompletedCount.
+      todayCompletedCount: petTodayNeeds.filter((need) => need.completed).length,
     };
   });
 });

@@ -5,8 +5,10 @@ import { PET_IMAGE_KEYS, PET_IMAGE_OPTIONS } from '#shared/utils/petImages';
 
 /**
  * Radio group over the preset pet portraits (dog / cat / bunny), plus an
- * "own photo" tile when a petId is available (edit context) — the photo
- * uploads immediately on selection via POST /api/pets/:petId/image.
+ * "own photo" tile. Edit context (a petId is set): the photo uploads immediately
+ * on selection via POST /api/pets/:petId/image. Create context (no petId yet):
+ * the chosen file is held via the `pendingFile` model with a local preview, and
+ * PetForm uploads it once the pet exists.
  */
 const props = defineProps<{
   petId?: string | null;
@@ -27,6 +29,10 @@ const presetLabel = computed<Record<PetImageKey, string>>(() => ({
 }));
 
 const model = defineModel<PetImageKey>({ required: true });
+// Create context: the picked file waits here until PetForm has an id to upload to.
+const pendingFile = defineModel<File | null>('pendingFile', { default: null });
+
+const isCreate = computed(() => !props.petId);
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const uploading = ref(false);
@@ -36,11 +42,34 @@ const uploadError = ref('');
 const presetPicked = ref(false);
 watch(model, () => {
   presetPicked.value = true;
+  // Picking a preset clears any pending create-mode photo.
+  if (isCreate.value) {
+    setPendingPreview(null);
+  }
 });
 
-const uploadUrl = computed(() =>
-  props.currentImage?.source === 'upload' ? props.currentImage.url : null,
-);
+// Local object-URL preview for a create-mode pending file (revoked on replace).
+const pendingPreview = ref<string | null>(null);
+function setPendingPreview(file: File | null): void {
+  if (pendingPreview.value) {
+    URL.revokeObjectURL(pendingPreview.value);
+  }
+  pendingPreview.value = file ? URL.createObjectURL(file) : null;
+  pendingFile.value = file;
+  presetPicked.value = !file;
+}
+onBeforeUnmount(() => {
+  if (pendingPreview.value) {
+    URL.revokeObjectURL(pendingPreview.value);
+  }
+});
+
+const uploadUrl = computed(() => {
+  if (isCreate.value) {
+    return pendingPreview.value;
+  }
+  return props.currentImage?.source === 'upload' ? props.currentImage.url : null;
+});
 watch(uploadUrl, (url) => {
   if (url) {
     presetPicked.value = false;
@@ -52,10 +81,18 @@ async function onFileChange(changeEvent: Event): Promise<void> {
   const input = changeEvent.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = ''; // allow picking the same file again after an error
-  if (!file || !props.petId || uploading.value) {
+  if (!file || uploading.value) {
     return;
   }
   uploadError.value = '';
+
+  // Create context: no pet to upload to yet — stash the file + preview; PetForm
+  // uploads it right after the pet is created.
+  if (isCreate.value) {
+    setPendingPreview(file);
+    return;
+  }
+
   uploading.value = true;
   try {
     const form = new FormData();
@@ -89,7 +126,6 @@ async function onFileChange(changeEvent: Event): Promise<void> {
       </label>
 
       <button
-        v-if="petId"
         type="button"
         class="pet-image-option upload-option"
         :class="{ selected: uploadSelected }"

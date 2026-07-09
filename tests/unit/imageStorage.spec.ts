@@ -2,9 +2,15 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { LocalDiskStorage, SupabaseStorage } from '../../server/utils/imageStorage';
+import { LocalDiskStorage, R2Storage } from '../../server/utils/imageStorage';
 
-const OPTIONS = { url: 'https://proj.supabase.test', serviceKey: 'service-key', bucket: 'pet-photos' };
+const OPTIONS = {
+  endpoint: 'https://acc123.r2.cloudflarestorage.com',
+  accessKeyId: 'access-key',
+  secretAccessKey: 'secret-key',
+  bucket: 'pet-photos',
+  publicBaseUrl: 'https://pub-abc.r2.dev',
+};
 
 /** Same shape as tests/unit/mailer.spec.ts: record calls, return a real Response. */
 function stubFetch(status: number, body = '') {
@@ -16,60 +22,67 @@ function stubFetch(status: number, body = '') {
   return { fetchImpl, calls };
 }
 
-describe('SupabaseStorage', () => {
+describe('R2Storage', () => {
   const key = 'pets/abc/photo.png';
+  const objectUrl = `${OPTIONS.endpoint}/${OPTIONS.bucket}/${key}`;
 
-  it('PUTs to the object endpoint with auth, content-type and upsert', async () => {
+  it('PUTs to the S3 object endpoint with a SigV4 signature and the given bytes', async () => {
     const { fetchImpl, calls } = stubFetch(200);
-    const storage = new SupabaseStorage(OPTIONS, fetchImpl);
+    const storage = new R2Storage(OPTIONS, fetchImpl);
     const data = Uint8Array.from([1, 2, 3, 4]);
     await storage.put(key, data, 'image/png');
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe(`${OPTIONS.url}/storage/v1/object/${OPTIONS.bucket}/${key}`);
-    expect(calls[0]!.init.method).toBe('POST');
+    expect(calls[0]!.url).toBe(objectUrl);
+    expect(calls[0]!.init.method).toBe('PUT');
     const headers = calls[0]!.init.headers as Record<string, string>;
-    expect(headers.Authorization).toBe('Bearer service-key');
-    expect(headers['Content-Type']).toBe('image/png');
-    expect(headers['x-upsert']).toBe('true');
+    // SigV4 auth header, well-formed for R2 (region "auto", service "s3").
+    expect(headers.Authorization).toMatch(
+      /^AWS4-HMAC-SHA256 Credential=access-key\/\d{8}\/auto\/s3\/aws4_request, SignedHeaders=[a-z0-9;-]+, Signature=[0-9a-f]{64}$/,
+    );
+    expect(headers['content-type']).toBe('image/png');
+    expect(headers['x-amz-content-sha256']).toMatch(/^[0-9a-f]{64}$/);
+    expect(headers['x-amz-date']).toMatch(/^\d{8}T\d{6}Z$/);
     expect(calls[0]!.init.body).toBe(data);
   });
 
   it('throws with status and trimmed body when put fails', async () => {
     const { fetchImpl } = stubFetch(500, 'internal error');
-    const storage = new SupabaseStorage(OPTIONS, fetchImpl);
+    const storage = new R2Storage(OPTIONS, fetchImpl);
     await expect(storage.put(key, Uint8Array.from([1]), 'image/png')).rejects.toThrow(
       /status 500.*internal error/,
     );
   });
 
-  it('DELETEs to the object endpoint on remove', async () => {
+  it('DELETEs to the S3 object endpoint with a SigV4 signature', async () => {
     const { fetchImpl, calls } = stubFetch(200);
-    const storage = new SupabaseStorage(OPTIONS, fetchImpl);
+    const storage = new R2Storage(OPTIONS, fetchImpl);
     await storage.remove(key);
 
-    expect(calls[0]!.url).toBe(`${OPTIONS.url}/storage/v1/object/${OPTIONS.bucket}/${key}`);
+    expect(calls[0]!.url).toBe(objectUrl);
     expect(calls[0]!.init.method).toBe('DELETE');
-    expect((calls[0]!.init.headers as Record<string, string>).Authorization).toBe('Bearer service-key');
+    expect((calls[0]!.init.headers as Record<string, string>).Authorization).toMatch(
+      /^AWS4-HMAC-SHA256 Credential=access-key\//,
+    );
+    // No body is sent on a delete.
+    expect(calls[0]!.init.body).toBeUndefined();
   });
 
   it('treats a 404 on remove as success (already gone)', async () => {
     const { fetchImpl } = stubFetch(404, 'Not found');
-    const storage = new SupabaseStorage(OPTIONS, fetchImpl);
+    const storage = new R2Storage(OPTIONS, fetchImpl);
     await expect(storage.remove(key)).resolves.toBeUndefined();
   });
 
   it('throws on a non-404 remove failure', async () => {
     const { fetchImpl } = stubFetch(500, 'boom');
-    const storage = new SupabaseStorage(OPTIONS, fetchImpl);
+    const storage = new R2Storage(OPTIONS, fetchImpl);
     await expect(storage.remove(key)).rejects.toThrow(/status 500.*boom/);
   });
 
-  it('builds a public object URL', () => {
-    const storage = new SupabaseStorage(OPTIONS, stubFetch(200).fetchImpl);
-    expect(storage.publicUrl(key)).toBe(
-      `${OPTIONS.url}/storage/v1/object/public/${OPTIONS.bucket}/${key}`,
-    );
+  it('builds a public object URL from the public base', () => {
+    const storage = new R2Storage(OPTIONS, stubFetch(200).fetchImpl);
+    expect(storage.publicUrl(key)).toBe(`${OPTIONS.publicBaseUrl}/${key}`);
   });
 });
 

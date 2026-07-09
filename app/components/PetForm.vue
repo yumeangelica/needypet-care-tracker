@@ -22,6 +22,9 @@ const breed = ref(props.pet?.breed ?? '');
 const description = ref(props.pet?.description ?? '');
 const birthday = ref(props.pet?.birthday ?? '');
 const imageKey = ref<PetImageKey>(props.pet?.image.source === 'preset' ? props.pet.image.key : 'cat');
+// Create context only: a photo chosen before the pet exists, uploaded right
+// after the pet is created (edit uploads immediately inside PetImagePicker).
+const pendingFile = ref<File | null>(null);
 
 // Saving must not silently replace an uploaded photo with the preset unless
 // the user actually picked a preset in this form session.
@@ -73,7 +76,24 @@ async function submit() {
     const saved = props.pet
       ? await $fetch<Pet>(`/api/pets/${props.pet.id}`, { method: 'PUT', body: parsed.data })
       : await $fetch<Pet>('/api/pets', { method: 'POST', body: parsed.data });
-    emit('saved', saved);
+
+    // Create context: upload the photo chosen before the pet existed. A failed
+    // upload must NOT lose the just-created pet — surface it, then continue to
+    // the pet (the photo can be retried from edit).
+    let savedWithImage = saved;
+    if (!props.pet && pendingFile.value) {
+      try {
+        const form = new FormData();
+        form.append('image', pendingFile.value);
+        savedWithImage = await $fetch<Pet>(`/api/pets/${saved.id}/image`, {
+          method: 'POST',
+          body: form,
+        });
+      } catch (uploadError) {
+        console.error('[PetForm] Pet created but photo upload failed:', uploadError);
+      }
+    }
+    emit('saved', savedWithImage);
   } catch (error) {
     if (error instanceof FetchError && error.statusCode === 422 && error.data?.errorDetails) {
       fieldErrors.value = error.data.errorDetails;
@@ -92,11 +112,11 @@ async function submit() {
   <form class="pet-form" novalidate @submit.prevent="submit">
     <PetImagePicker
       v-model="imageKey"
+      v-model:pending-file="pendingFile"
       :pet-id="props.pet?.id"
       :current-image="props.pet?.image"
       @uploaded="onUploaded"
     />
-    <p v-if="!isEdit" class="pet-form-hint">{{ $t('pets.photoAfterSaving') }}</p>
 
     <FormField v-slot="{ id, describedBy, invalid }" :label="$t('pets.name')" :error="firstError('name')">
       <input
@@ -185,12 +205,6 @@ async function submit() {
 .pet-form-textarea {
   resize: vertical;
   min-height: 80px;
-}
-
-.pet-form-hint {
-  margin: -0.3rem 0 0.3rem;
-  font-size: 0.8rem;
-  color: var(--color-muted-foreground);
 }
 
 .pet-form-actions {

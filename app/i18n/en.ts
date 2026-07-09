@@ -124,7 +124,6 @@ export default {
     keepPet: 'Keep {name}',
     removeForGood: 'Remove for good',
     // Pet form
-    photoAfterSaving: 'You can add your own photo after saving.',
     name: 'Name',
     namePlaceholder: 'What are they called?',
     speciesOptional: 'Species (optional)',

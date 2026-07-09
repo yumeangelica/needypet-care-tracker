@@ -55,7 +55,7 @@ const bundle: RawBundle = {
 };
 
 if (process.env.NUXT_DB_URL) {
-  console.error('db:import is a local SQLite dev tool - refusing to run against NUXT_DB_URL');
+  console.error('db:import is a local SQLite dev tool - refusing to run against a remote DB (NUXT_DB_URL)');
   process.exit(1);
 }
 

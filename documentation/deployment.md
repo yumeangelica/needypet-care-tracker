@@ -1,8 +1,9 @@
 # Deployment
 
-Production checklist for hosting NeedyPet. The database path (SQLite → Postgres/
-Supabase) has its own doc: [`postgres.md`](./postgres.md). This file covers the
-full runtime environment, pet-photo storage, and the daily-digest cron.
+Production checklist for hosting NeedyPet. The app is SQLite-only: `bun:sqlite`
+locally, and libSQL/Turso in production (same dialect, schema and migrations — no
+dialect drift). This file covers the full runtime environment, pet-photo storage,
+and the daily-digest cron.
 
 ## Build and run
 
@@ -16,8 +17,9 @@ Run migrations at deploy time, never at runtime (the dev-only migrate plugin is
 skipped in production):
 
 ```bash
-# SQLite host: apply the sqlite migrations to the live DB file before starting.
-# Postgres/Supabase: see postgres.md (db:migrate:pg against the direct 5432 URL).
+# Local SQLite host: apply the sqlite migrations to the live DB file before starting.
+# Turso/libSQL: apply the same server/db/migrations/sqlite set to the remote DB
+# (via the Turso CLI or a drizzle-orm/libsql migrate step) before starting.
 ```
 
 ## Environment variables
@@ -26,15 +28,17 @@ skipped in production):
 | --- | --- |
 | `NUXT_SESSION_PASSWORD` | 32+ char secret sealing the session cookie (**required**) |
 | `NUXT_DB_FILE` | local SQLite path (default `.data/needypet.sqlite`) |
-| `NUXT_DB_URL` | set → switches the server to Postgres ([`postgres.md`](./postgres.md)) |
+| `NUXT_DB_URL` | set (a `libsql://` Turso URL) → uses the remote libSQL DB instead of the local file |
 | `NUXT_MAILER_PROVIDER` | `resend` enables the HTTP mailer; unset = console mailer (dev) |
 | `NUXT_MAILER_API_KEY` | Resend API key (required when provider is `resend`) |
 | `NUXT_MAILER_FROM` | sender address, e.g. `NeedyPet <no-reply@yourdomain>` |
-| `NUXT_UPLOADS_PROVIDER` | `local` (default) or `supabase` for pet photos |
+| `NUXT_UPLOADS_PROVIDER` | `local` (default) or `r2` (Cloudflare R2) for pet photos |
 | `NUXT_UPLOADS_DIR` | local photo directory (default `.data/uploads`; local provider only) |
-| `NUXT_UPLOADS_SUPABASE_URL` | Supabase project URL, e.g. `https://<ref>.supabase.co` |
-| `NUXT_UPLOADS_SUPABASE_SERVICE_KEY` | Supabase **service role** key (server-side only) |
-| `NUXT_UPLOADS_SUPABASE_BUCKET` | Storage bucket name for pet photos |
+| `NUXT_UPLOADS_R2_ENDPOINT` | R2 S3 API endpoint, e.g. `https://<accountId>.r2.cloudflarestorage.com` |
+| `NUXT_UPLOADS_R2_ACCESS_KEY_ID` | R2 access key id (server-side only) |
+| `NUXT_UPLOADS_R2_SECRET_ACCESS_KEY` | R2 secret access key (server-side only) |
+| `NUXT_UPLOADS_R2_BUCKET` | R2 bucket name for pet photos |
+| `NUXT_UPLOADS_R2_PUBLIC_BASE_URL` | public read base, e.g. `https://pub-<hash>.r2.dev` or a custom domain |
 | `NUXT_DIGEST_SECRET` | shared secret guarding the digest cron endpoint; **empty = endpoint disabled (always 401)** |
 | `NUXT_DIGEST_HOUR` | local hour (0–23) each user must reach before that day's digest sends (default `18`) |
 
@@ -45,16 +49,19 @@ Local disk (`NUXT_UPLOADS_PROVIDER=local`) is the dev default and writes under
 photos vanish on redeploy — only use the local provider in production if you have
 mounted a persistent volume at that path.
 
-For a durable setup use Supabase Storage:
+For a durable setup use Cloudflare R2 (10 GB free, zero egress, no inactivity
+pause):
 
-1. In the Supabase dashboard, create a Storage bucket (e.g. `pet-photos`) and mark
-   it **Public**.
-2. Set `NUXT_UPLOADS_PROVIDER=supabase` plus the three `NUXT_UPLOADS_SUPABASE_*`
-   variables. If the provider is `supabase` and any of the three is missing, the
-   first upload throws — the app never silently falls back to ephemeral local
-   disk.
-3. The service role key is used server-side only (uploads/deletes go through the
-   Nitro API, never the browser).
+1. In the R2 dashboard, create a bucket (e.g. `pet-photos`) and enable **public
+   access** (an `r2.dev` subdomain or a custom domain) — that URL is
+   `NUXT_UPLOADS_R2_PUBLIC_BASE_URL`.
+2. Create an R2 API token (Object Read & Write) to get the access key id / secret
+   and the account's S3 endpoint.
+3. Set `NUXT_UPLOADS_PROVIDER=r2` plus the five `NUXT_UPLOADS_R2_*` variables. If
+   the provider is `r2` and any is missing, the first upload throws — the app never
+   silently falls back to ephemeral local disk.
+4. Writes/deletes are signed with AWS SigV4 (via Web Crypto, no SDK) and go through
+   the Nitro API server-side only, never the browser.
 
 **Why a public bucket:** the app stores each photo's public URL and serves it
 directly. Storage keys embed an unguessable UUID (`pets/<petId>/<uuid>.<ext>`),

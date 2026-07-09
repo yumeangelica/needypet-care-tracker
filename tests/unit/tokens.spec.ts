@@ -2,26 +2,28 @@ import { describe, expect, it } from 'vitest';
 import { createToken, expiryFromNow, hashToken } from '../../server/utils/tokens';
 
 describe('createToken', () => {
-  it('returns a url-safe token and its sha256 hash', () => {
-    const { token, tokenHash } = createToken();
+  it('returns a url-safe token and its sha256 hash', async () => {
+    const { token, tokenHash } = await createToken();
     expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/); // 32 bytes base64url
     expect(tokenHash).toMatch(/^[0-9a-f]{64}$/);
-    expect(tokenHash).toBe(hashToken(token));
+    expect(tokenHash).toBe(await hashToken(token));
   });
 
-  it('produces unique tokens', () => {
-    const tokens = new Set(Array.from({ length: 50 }, () => createToken().token));
+  it('produces unique tokens', async () => {
+    const tokens = new Set(
+      await Promise.all(Array.from({ length: 50 }, async () => (await createToken()).token)),
+    );
     expect(tokens.size).toBe(50);
   });
 });
 
 describe('hashToken', () => {
-  it('is deterministic', () => {
-    expect(hashToken('abc')).toBe(hashToken('abc'));
+  it('is deterministic', async () => {
+    expect(await hashToken('abc')).toBe(await hashToken('abc'));
   });
 
-  it('differs for different inputs', () => {
-    expect(hashToken('abc')).not.toBe(hashToken('abd'));
+  it('differs for different inputs', async () => {
+    expect(await hashToken('abc')).not.toBe(await hashToken('abd'));
   });
 });
 

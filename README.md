@@ -6,21 +6,22 @@ the legacy Vue/Vite + Express + MongoDB app (kept read-only next door as
 reference).
 
 Stack: Nuxt 4 · Vue 3 · TypeScript · Tailwind CSS v4 · Nuxt server routes ·
-Drizzle ORM · SQLite locally / Postgres (Supabase) in production · Bun. Bun-native
-throughout: `bun:sqlite` and `Bun.sql` drive the database, `Bun.password`
-(argon2id) hashes passwords, and the test suite runs under `bun --bun vitest` — no
-Node runtime required.
+Drizzle ORM · SQLite (bun:sqlite locally, libSQL/Turso-ready for production) · Bun.
+Bun-native and Web-standard throughout: `bun:sqlite` drives the database,
+`Bun.password` (argon2id) hashes passwords, `Bun.write`/`Bun.file` handle uploads,
+Web Crypto powers tokens and R2 request signing, and the test suite runs under
+`bun --bun vitest` — no `node:crypto`, no Node runtime required.
 
 ## Features
 
 - Cookie-session auth (nuxt-auth-utils) with email confirmation, password
   reset, account deletion with cascades, and rate limiting on the auth
   endpoints (`documentation/auth-audit.md`)
-- Pets with preset portraits **or an uploaded photo** (magic-byte validated,
-  local disk in dev or Supabase Storage in production, behind one storage
-  abstraction — see `documentation/deployment.md`)
+- Pets with preset portraits **or an uploaded photo** (chosen when creating or
+  editing a pet, magic-byte validated, local disk in dev or Cloudflare R2 in
+  production, behind one storage abstraction — see `documentation/deployment.md`)
 - Daily care tasks (needs): max 10/day, pause/resume, lazy day rollover in the
-  owner's timezone
+  owner's timezone; the dashboard shows each pet's done/total progress for today
 - Care records: full and partial logs with auto-completion, manual
   time-of-day, edit/delete with an owner/caretaker permission matrix
 - Caretaker management and caretaker self-removal
@@ -42,11 +43,11 @@ Node runtime required.
 | --- | --- |
 | `NUXT_SESSION_PASSWORD` | 32+ char secret sealing the session cookie (required) |
 | `NUXT_DB_FILE` | local SQLite path (default `.data/needypet.sqlite`) |
-| `NUXT_DB_URL` | set in production → switches the server to Postgres (`documentation/postgres.md`) |
+| `NUXT_DB_URL` | set in production (a `libsql://` Turso URL) → uses the remote libSQL DB (`documentation/deployment.md`) |
 | `NUXT_MAILER_PROVIDER` / `NUXT_MAILER_API_KEY` / `NUXT_MAILER_FROM` | `resend` + key + sender enables the HTTP mailer; unset = console mailer (dev) |
-| `NUXT_UPLOADS_PROVIDER` | `local` (default) or `supabase` for pet photos (`documentation/deployment.md`) |
+| `NUXT_UPLOADS_PROVIDER` | `local` (default) or `r2` (Cloudflare R2) for pet photos (`documentation/deployment.md`) |
 | `NUXT_UPLOADS_DIR` | pet photo directory for the local storage provider (default `.data/uploads`) |
-| `NUXT_UPLOADS_SUPABASE_URL` / `NUXT_UPLOADS_SUPABASE_SERVICE_KEY` / `NUXT_UPLOADS_SUPABASE_BUCKET` | Supabase Storage config (required when the provider is `supabase`) |
+| `NUXT_UPLOADS_R2_ENDPOINT` / `NUXT_UPLOADS_R2_ACCESS_KEY_ID` / `NUXT_UPLOADS_R2_SECRET_ACCESS_KEY` / `NUXT_UPLOADS_R2_BUCKET` / `NUXT_UPLOADS_R2_PUBLIC_BASE_URL` | Cloudflare R2 config (required when the provider is `r2`) |
 | `NUXT_DIGEST_SECRET` | secret guarding the daily-digest cron endpoint; empty = disabled |
 | `NUXT_DIGEST_HOUR` | local hour (0–23) each user must reach before their digest sends (default `18`) |
 
@@ -57,8 +58,8 @@ Full production setup (build, migrations, storage, digest cron) lives in
 
 - `app/` — pages, layouts, components (mobile-first, bottom navigation)
 - `server/api/` — session-cookie-authenticated API routes
-- `server/db/` — Drizzle schemas (`schema.sqlite.ts` + `schema.pg.ts` in
-  lockstep), migrations for both dialects, seed, legacy importer
+- `server/db/` — Drizzle schema (`schema.sqlite.ts`), SQLite migrations, DB client
+  (`index.ts`, with a Turso/libSQL seam), seed, legacy importer
 - `shared/` — domain types, date/measurement/stats/pet-image utilities, zod
   schemas used by both client and server
 - `tests/unit/` — pure-function vitest tests for the shared utilities;
@@ -67,9 +68,9 @@ Full production setup (build, migrations, storage, digest cron) lives in
 - `public/` — static assets and PWA icons (`favicon.ico`, `pwa-192x192.png`,
   `pwa-512x512.png`, `maskable-512x512.png`, `apple-touch-icon.png`); the manifest
   and service worker are generated at build time by `@vite-pwa/nuxt`
-- `documentation/` — `deployment.md` (production environment, storage, digest
-  cron, PWA), `postgres.md` (production database path), `migration.md` (legacy
-  import contract), `auth-audit.md` (auth hardening notes)
+- `documentation/` — `deployment.md` (production environment, database, storage,
+  digest cron, PWA), `migration.md` (legacy import contract), `auth-audit.md`
+  (auth hardening notes)
 
 ## Internationalization
 

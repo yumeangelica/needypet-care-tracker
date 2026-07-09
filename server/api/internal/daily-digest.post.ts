@@ -1,4 +1,3 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
 import { and, eq, inArray } from 'drizzle-orm';
 import { hourInTimeZone, todayInTimeZone } from '#shared/utils/date';
 import type { DigestPetSection } from '#shared/utils/digest';
@@ -28,7 +27,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const provided = getHeader(event, 'x-digest-secret') ?? '';
-  if (!timingSafeStringEqual(provided, secret)) {
+  if (!(await timingSafeStringEqual(provided, secret))) {
     unauthorized('Invalid digest secret');
   }
 
@@ -175,12 +174,21 @@ async function collectOpenTaskSections(
 }
 
 /**
- * Constant-time string comparison. Hashing both sides to a fixed-length SHA-256
- * digest first means unequal input lengths don't leak (and timingSafeEqual
- * never throws on a length mismatch).
+ * Constant-time string comparison via Web Crypto (no node:crypto). Hashing both
+ * sides to a fixed 32-byte SHA-256 digest first means unequal input lengths
+ * don't leak and the byte comparison always runs over the same length.
  */
-function timingSafeStringEqual(a: string, b: string): boolean {
-  const ha = createHash('sha256').update(a).digest();
-  const hb = createHash('sha256').update(b).digest();
-  return timingSafeEqual(ha, hb);
+async function timingSafeStringEqual(a: string, b: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const [ha, hb] = await Promise.all([
+    crypto.subtle.digest('SHA-256', encoder.encode(a)),
+    crypto.subtle.digest('SHA-256', encoder.encode(b)),
+  ]);
+  const va = new Uint8Array(ha);
+  const vb = new Uint8Array(hb);
+  let diff = 0;
+  for (let i = 0; i < va.length; i++) {
+    diff |= va[i]! ^ vb[i]!;
+  }
+  return diff === 0;
 }

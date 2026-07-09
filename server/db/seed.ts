@@ -15,7 +15,7 @@ import { careRecords, needs, petCaretakers, pets, users } from './schema';
  */
 
 if (process.env.NUXT_DB_URL) {
-  throw new Error('db:seed is a local SQLite dev tool - refusing to run against NUXT_DB_URL');
+  throw new Error('db:seed is a local SQLite dev tool - refusing to run against a remote DB (NUXT_DB_URL)');
 }
 
 const db = useDb();

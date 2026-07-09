@@ -174,3 +174,22 @@ describe('lazy rollover', () => {
     expect(rows.filter((row) => row.dateFor === ownerToday && !row.archived)).toHaveLength(1);
   });
 });
+
+describe('dashboard task progress counts', () => {
+  it('splits today needs into open (todayTaskCount) and completed (todayCompletedCount)', async () => {
+    const owner = await createUserWithSession({ timezone: AHEAD_TZ });
+    const today = todayInTimeZone(AHEAD_TZ);
+    // Pre-stamp the guard so rollover doesn't archive/replace these today needs.
+    const pet = await createPet(owner.id, { lastRolledNeedDate: today });
+    await createNeed(pet.id, { dateFor: today, category: 'Fresh water' });
+    await createNeed(pet.id, { dateFor: today, category: 'Evening walk', completed: true });
+    // Completed but archived — must not count toward the badge total.
+    await createNeed(pet.id, { dateFor: today, category: 'Old task', completed: true, archived: true });
+
+    const res = await api('/api/pets', { cookie: owner.cookie });
+    expect(res.status).toBe(200);
+    const listed = res.body.find((item: { id: string }) => item.id === pet.id);
+    expect(listed.todayTaskCount).toBe(1);
+    expect(listed.todayCompletedCount).toBe(1);
+  });
+});
