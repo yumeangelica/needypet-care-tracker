@@ -2,7 +2,7 @@ import { Database } from 'bun:sqlite';
 import { eq } from 'drizzle-orm';
 import { type BunSQLiteDatabase, drizzle } from 'drizzle-orm/bun-sqlite';
 // The sqlite schema module is imported directly (not ./schema) so a
-// NUXT_DB_URL inherited from the shell can't flip this process to pg.
+// NUXT_DB_URL inherited from the shell can't flip this process to a remote DB.
 import * as schema from '../../server/db/schema.sqlite';
 import { hashToken } from '../../server/utils/tokens';
 
@@ -304,7 +304,7 @@ export async function plantEmailConfirmToken(
 ): Promise<void> {
   await testDb()
     .update(users)
-    .set({ emailConfirmToken: hashToken(rawToken), emailConfirmExpiresAt: expiresAt })
+    .set({ emailConfirmToken: await hashToken(rawToken), emailConfirmExpiresAt: expiresAt })
     .where(eq(users.id, userId));
 }
 
@@ -315,6 +315,6 @@ export async function plantPasswordResetToken(
 ): Promise<void> {
   await testDb()
     .update(users)
-    .set({ passwordResetToken: hashToken(rawToken), passwordResetExpiresAt: expiresAt })
+    .set({ passwordResetToken: await hashToken(rawToken), passwordResetExpiresAt: expiresAt })
     .where(eq(users.id, userId));
 }

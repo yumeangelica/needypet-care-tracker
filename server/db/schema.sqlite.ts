@@ -2,12 +2,12 @@ import { sql } from 'drizzle-orm';
 import { check, index, integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 /**
- * SQLite schema written with Postgres-portable conventions so the production
- * pg schema is a mechanical transcription:
+ * The single database schema (dev bun:sqlite, prod libSQL/Turso — same dialect).
+ * Portable conventions kept so any SQLite host behaves identically:
  * - TEXT UUID primary keys (crypto.randomUUID())
- * - date-only values as TEXT 'YYYY-MM-DD' (string-compared, both dialects)
+ * - date-only values as TEXT 'YYYY-MM-DD' (string-compared)
  * - timestamps as TEXT ISO-8601 UTC
- * - integer({ mode: 'boolean' }) -> pg boolean
+ * - integer({ mode: 'boolean' }) for boolean columns
  * Every table keeps a nullable legacy_id for future Mongo import traceability.
  */
 

@@ -41,7 +41,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
       env: {
         NUXT_DB_FILE: dbFile,
         // The server reads plain process.env, so an inherited production URL
-        // must be blanked or the suite would silently target Postgres.
+        // must be blanked or the suite would silently target a remote DB.
         NUXT_DB_URL: '',
         NUXT_SESSION_PASSWORD: 'needypet-integration-test-session-password',
         NUXT_UPLOADS_DIR: uploadsDir,
@@ -56,7 +56,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     consola.restoreAll();
 
     const ctx = useTestContext();
-    const startedServer = await startBuiltServer(rootDir, ctx.options.env);
+    const startedServer = await startBuiltServer(rootDir, ctx.options.env ?? {});
     serverProcess = startedServer.process;
     ctx.url = startedServer.url;
 

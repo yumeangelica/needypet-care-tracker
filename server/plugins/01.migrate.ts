@@ -3,11 +3,11 @@ import { useDb } from '../db';
 
 /**
  * Applies pending SQLite migrations on server start. Idempotent and instant
- * for local development. Production Postgres migrations will instead run at
- * deploy time, never at runtime.
+ * for local development. Against a remote DB (Turso/libSQL) migrations run at
+ * deploy time instead, never at runtime.
  */
 export default defineNitroPlugin(() => {
-  // Never at runtime against Postgres — pg migrations run via db:migrate:pg.
+  // Local dev only — never auto-migrate a remote DB (NUXT_DB_URL) at runtime.
   if (import.meta.dev && !process.env.NUXT_DB_URL) {
     migrate(useDb(), { migrationsFolder: 'server/db/migrations/sqlite' });
   }
