@@ -10,7 +10,11 @@ import type { Pet, PetImageKey } from '#shared/types/domain';
  */
 const props = defineProps<{ pet?: Pet | null }>();
 
-const emit = defineEmits<{ saved: [pet: Pet]; cancel: []; uploaded: [pet: Pet] }>();
+const emit = defineEmits<{
+  saved: [pet: Pet, photoUploadFailed?: boolean];
+  cancel: [];
+  uploaded: [pet: Pet];
+}>();
 
 const { t } = useI18n();
 
@@ -27,11 +31,10 @@ const imageKey = ref<PetImageKey>(props.pet?.image.source === 'preset' ? props.p
 const pendingFile = ref<File | null>(null);
 
 // Saving must not silently replace an uploaded photo with the preset unless
-// the user actually picked a preset in this form session.
+// the user actually picked a preset in this form session. Driven by the
+// picker's preset-picked event (not a watch on imageKey) so re-clicking the
+// already-selected preset counts too.
 const imageDirty = ref(false);
-watch(imageKey, () => {
-  imageDirty.value = true;
-});
 
 function onUploaded(pet: Pet): void {
   imageDirty.value = false;
@@ -43,7 +46,9 @@ const errorMessage = ref('');
 const fieldErrors = ref<Record<string, string[]>>({});
 
 function firstError(field: string): string | null {
-  return fieldErrors.value[field]?.[0] ?? null;
+  // Zod messages are i18n keys (shared/schemas/*) — translate for display.
+  const key = fieldErrors.value[field]?.[0];
+  return key ? t(key) : null;
 }
 
 async function submit() {
@@ -78,9 +83,10 @@ async function submit() {
       : await $fetch<Pet>('/api/pets', { method: 'POST', body: parsed.data });
 
     // Create context: upload the photo chosen before the pet existed. A failed
-    // upload must NOT lose the just-created pet — surface it, then continue to
-    // the pet (the photo can be retried from edit).
+    // upload must NOT lose the just-created pet — the flag lets the caller
+    // surface it on the pet page (the photo can be retried from edit).
     let savedWithImage = saved;
+    let photoUploadFailed = false;
     if (!props.pet && pendingFile.value) {
       try {
         const form = new FormData();
@@ -91,16 +97,15 @@ async function submit() {
         });
       } catch (uploadError) {
         console.error('[PetForm] Pet created but photo upload failed:', uploadError);
+        photoUploadFailed = true;
       }
     }
-    emit('saved', savedWithImage);
+    emit('saved', savedWithImage, photoUploadFailed);
   } catch (error) {
     if (error instanceof FetchError && error.statusCode === 422 && error.data?.errorDetails) {
       fieldErrors.value = error.data.errorDetails;
-    } else if (error instanceof FetchError && error.data?.message) {
-      errorMessage.value = error.data.message;
     } else {
-      errorMessage.value = t('errors.generic');
+      errorMessage.value = resolveFetchError(error, t);
     }
   } finally {
     submitting.value = false;
@@ -116,6 +121,7 @@ async function submit() {
       :pet-id="props.pet?.id"
       :current-image="props.pet?.image"
       @uploaded="onUploaded"
+      @preset-picked="imageDirty = true"
     />
 
     <FormField v-slot="{ id, describedBy, invalid }" :label="$t('pets.name')" :error="firstError('name')">

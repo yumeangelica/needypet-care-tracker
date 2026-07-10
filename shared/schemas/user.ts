@@ -5,41 +5,42 @@ import { isSupportedTimeZone } from '../utils/date';
  * Password strength rules (ported from the old app): min 10 chars with at
  * least one lowercase, one uppercase, one digit and one special character.
  * Exported as a list so the register form can render a live checklist.
+ * `label` is an i18n key (app/i18n/{en,fi}.ts) resolved by the rendering page.
  */
 export const PASSWORD_RULES: readonly { id: string; label: string; test: (pw: string) => boolean }[] = [
-  { id: 'length', label: 'At least 10 characters', test: (pw) => pw.length >= 10 },
-  { id: 'lowercase', label: 'One lowercase letter', test: (pw) => /[a-z]/.test(pw) },
-  { id: 'uppercase', label: 'One uppercase letter', test: (pw) => /[A-Z]/.test(pw) },
-  { id: 'digit', label: 'One number', test: (pw) => /[0-9]/.test(pw) },
-  { id: 'special', label: 'One special character (!@#$%^&*)', test: (pw) => /[!@#$%^&*]/.test(pw) },
+  { id: 'length', label: 'validation.passwordRuleLength', test: (pw) => pw.length >= 10 },
+  { id: 'lowercase', label: 'validation.passwordRuleLowercase', test: (pw) => /[a-z]/.test(pw) },
+  { id: 'uppercase', label: 'validation.passwordRuleUppercase', test: (pw) => /[A-Z]/.test(pw) },
+  { id: 'digit', label: 'validation.passwordRuleDigit', test: (pw) => /[0-9]/.test(pw) },
+  { id: 'special', label: 'validation.passwordRuleSpecial', test: (pw) => /[!@#$%^&*]/.test(pw) },
 ];
 
 export function isStrongPassword(password: string): boolean {
   return PASSWORD_RULES.every((rule) => rule.test(password));
 }
 
+// Schema messages are stable i18n keys (app/i18n/{en,fi}.ts, validation.*):
+// the same key travels through client-side parses and server 422 payloads and
+// is translated at the display layer, so validation is localized everywhere.
 export const strongPasswordSchema = z
   .string()
-  .min(10, 'Password must be at least 10 characters')
-  .max(100, 'Password must be at most 100 characters')
-  .refine(isStrongPassword, {
-    message:
-      'Password must include lowercase, uppercase, a number and a special character (!@#$%^&*)',
-  });
+  .min(10, 'validation.passwordMin')
+  .max(100, 'validation.passwordMax')
+  .refine(isStrongPassword, { message: 'validation.passwordStrength' });
 
 export const userNameSchema = z
   .string()
-  .min(3, 'Username must be at least 3 characters')
-  .max(40, 'Username must be at most 40 characters');
+  .min(3, 'validation.userNameMin')
+  .max(40, 'validation.userNameMax');
 
 export const emailSchema = z
-  .email('A valid email is required')
-  .min(6, 'Email must be at least 6 characters')
-  .max(100, 'Email must be at most 100 characters');
+  .email('validation.email')
+  .min(6, 'validation.emailMin')
+  .max(100, 'validation.emailMax');
 
 export const timezoneSchema = z
   .string()
-  .refine(isSupportedTimeZone, { message: 'Invalid timezone' });
+  .refine(isSupportedTimeZone, { message: 'validation.timezone' });
 
 export const localeSchema = z.enum(['en', 'fi']);
 
@@ -52,7 +53,7 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   userName: userNameSchema,
-  password: z.string().min(1, 'Password is required'),
+  password: z.string().min(1, 'validation.passwordRequired'),
 });
 
 /**
@@ -66,16 +67,16 @@ export const profileUpdateSchema = z.object({
   timezone: timezoneSchema,
   locale: localeSchema,
   digestOptIn: z.boolean(),
-  currentPassword: z.string().min(1, 'Current password is required'),
+  currentPassword: z.string().min(1, 'validation.currentPasswordRequired'),
 });
 
 export const passwordChangeSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
+  currentPassword: z.string().min(1, 'validation.currentPasswordRequired'),
   newPassword: strongPasswordSchema,
 });
 
 export const confirmEmailSchema = z.object({
-  token: z.string().min(1, 'Token is required'),
+  token: z.string().min(1, 'validation.tokenRequired'),
 });
 
 export const forgotPasswordSchema = z.object({
@@ -83,12 +84,12 @@ export const forgotPasswordSchema = z.object({
 });
 
 export const resetPasswordSchema = z.object({
-  token: z.string().min(1, 'Token is required'),
+  token: z.string().min(1, 'validation.tokenRequired'),
   newPassword: strongPasswordSchema,
 });
 
 export const accountDeleteSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
+  currentPassword: z.string().min(1, 'validation.currentPasswordRequired'),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

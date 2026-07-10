@@ -13,9 +13,12 @@ import { toDomainNeed, toMeasurementColumns } from '../../../../../../utils/mapp
 import { requirePetAccess } from '../../../../../../utils/petAccess';
 import { requireAppUser } from '../../../../../../utils/session';
 
-const REJECTION_MESSAGES: Record<RecordMutationRejection, string> = {
-  'archived': 'Care history for rolled-over days is frozen',
-  'measurement-mismatch': 'Care record measurement must match need measurement',
+const REJECTION_MESSAGES: Record<RecordMutationRejection, { message: string; key: string }> = {
+  'archived': { message: 'Care history for rolled-over days is frozen', key: 'errors.dayFrozen' },
+  'measurement-mismatch': {
+    message: 'Care record measurement must match need measurement',
+    key: 'errors.measurementMismatch',
+  },
 };
 
 /**
@@ -50,7 +53,7 @@ export default defineEventHandler(async (event): Promise<Need> => {
 
   const rejection = validateRecordMutation(toDomainNeed(needRow), input);
   if (rejection) {
-    badRequest(REJECTION_MESSAGES[rejection]);
+    badRequest(REJECTION_MESSAGES[rejection].message, REJECTION_MESSAGES[rejection].key);
   }
 
   const now = instantToIso(Temporal.Now.instant());
@@ -65,10 +68,10 @@ export default defineEventHandler(async (event): Promise<Need> => {
     const ownerTimezone = owner?.timezone ?? 'UTC';
     recordDate = zonedDateTimeToUtcIso(needRow.dateFor, input.timeOfDay, ownerTimezone);
     if (recordDate > now) {
-      badRequest('Cannot log care in the future');
+      badRequest('Cannot log care in the future', 'errors.careInFuture');
     }
     if (todayInTimeZone(ownerTimezone, Temporal.Instant.from(recordDate)) !== needRow.dateFor) {
-      badRequest('Time must fall within the care day');
+      badRequest('Time must fall within the care day', 'errors.timeOutsideCareDay');
     }
   }
 

@@ -19,7 +19,7 @@ export default defineEventHandler(async (event): Promise<Pet> => {
   const pet = await requirePetOwner(petId, user.id);
 
   if (pet.imageSource !== 'upload') {
-    badRequest('This pet has no uploaded photo');
+    badRequest('This pet has no uploaded photo', 'errors.noUploadedPhoto');
   }
 
   const updatedRows = await useDb()

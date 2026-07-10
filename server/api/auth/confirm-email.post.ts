@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
       ),
   );
   if (!user) {
-    badRequest('That confirmation link has expired or was already used');
+    badRequest('That confirmation link has expired or was already used', 'errors.confirmLinkExpired');
   }
 
   await db

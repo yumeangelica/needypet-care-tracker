@@ -21,6 +21,7 @@ const fillPercent = computed(() =>
     <span
       class="task-progress-track"
       role="progressbar"
+      :aria-label="$t('needs.todayProgress')"
       :aria-valuenow="done"
       :aria-valuemin="0"
       :aria-valuemax="total"

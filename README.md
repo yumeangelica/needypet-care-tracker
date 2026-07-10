@@ -44,6 +44,7 @@ Web Crypto powers tokens and R2 request signing, and the test suite runs under
 | `NUXT_SESSION_PASSWORD` | 32+ char secret sealing the session cookie (required) |
 | `NUXT_DB_FILE` | local SQLite path (default `.data/needypet.sqlite`) |
 | `NUXT_DB_URL` | set in production (a `libsql://` Turso URL) → uses the remote libSQL DB (`documentation/deployment.md`) |
+| `NUXT_DB_AUTH_TOKEN` | Turso auth token, required alongside a `libsql://` URL |
 | `NUXT_MAILER_PROVIDER` / `NUXT_MAILER_API_KEY` / `NUXT_MAILER_FROM` | `resend` + key + sender enables the HTTP mailer; unset = console mailer (dev) |
 | `NUXT_UPLOADS_PROVIDER` | `local` (default) or `r2` (Cloudflare R2) for pet photos (`documentation/deployment.md`) |
 | `NUXT_UPLOADS_DIR` | pet photo directory for the local storage provider (default `.data/uploads`) |

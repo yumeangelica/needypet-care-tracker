@@ -14,12 +14,15 @@ bun run preview        # serves .output/server/index.mjs with Bun
 ```
 
 Run migrations at deploy time, never at runtime (the dev-only migrate plugin is
-skipped in production):
+skipped in production). `db:migrate` targets whichever database the environment
+points at and is idempotent:
 
 ```bash
-# Local SQLite host: apply the sqlite migrations to the live DB file before starting.
-# Turso/libSQL: apply the same server/db/migrations/sqlite set to the remote DB
-# (via the Turso CLI or a drizzle-orm/libsql migrate step) before starting.
+# Local SQLite host: migrates the file at NUXT_DB_FILE.
+bun run db:migrate
+
+# Turso/libSQL: same migration set, applied to the remote DB.
+NUXT_DB_URL=libsql://<db>-<org>.turso.io NUXT_DB_AUTH_TOKEN=<token> bun run db:migrate
 ```
 
 ## Environment variables
@@ -29,6 +32,7 @@ skipped in production):
 | `NUXT_SESSION_PASSWORD` | 32+ char secret sealing the session cookie (**required**) |
 | `NUXT_DB_FILE` | local SQLite path (default `.data/needypet.sqlite`) |
 | `NUXT_DB_URL` | set (a `libsql://` Turso URL) → uses the remote libSQL DB instead of the local file |
+| `NUXT_DB_AUTH_TOKEN` | Turso database auth token (required with a `libsql://` URL) |
 | `NUXT_MAILER_PROVIDER` | `resend` enables the HTTP mailer; unset = console mailer (dev) |
 | `NUXT_MAILER_API_KEY` | Resend API key (required when provider is `resend`) |
 | `NUXT_MAILER_FROM` | sender address, e.g. `NeedyPet <no-reply@yourdomain>` |
@@ -41,6 +45,30 @@ skipped in production):
 | `NUXT_UPLOADS_R2_PUBLIC_BASE_URL` | public read base, e.g. `https://pub-<hash>.r2.dev` or a custom domain |
 | `NUXT_DIGEST_SECRET` | shared secret guarding the digest cron endpoint; **empty = endpoint disabled (always 401)** |
 | `NUXT_DIGEST_HOUR` | local hour (0–23) each user must reach before that day's digest sends (default `18`) |
+
+## Database (Turso)
+
+The recommended production database is [Turso](https://turso.tech) — hosted
+libSQL, i.e. the same SQLite dialect, schema and migration set the app already
+uses locally, so there is zero dialect drift. The free tier is comfortably
+enough for this app.
+
+1. Install the Turso CLI and sign up, then create the database:
+   `turso db create needypet`.
+2. Get the connection URL and an auth token:
+   `turso db show needypet --url` → `NUXT_DB_URL` (a `libsql://...` URL), and
+   `turso db tokens create needypet` → `NUXT_DB_AUTH_TOKEN`.
+3. Apply the migrations before the first start (and on every deploy that adds
+   a migration): `NUXT_DB_URL=... NUXT_DB_AUTH_TOKEN=... bun run db:migrate`.
+4. Verify foreign-key enforcement once per database — account/pet deletion
+   relies on `ON DELETE CASCADE`: in `turso db shell needypet` run
+   `PRAGMA foreign_keys;` and expect `1`. Turso enforces foreign keys by
+   default; this check just pins the assumption.
+
+With `NUXT_DB_URL` unset the app falls back to the local `bun:sqlite` file
+(`NUXT_DB_FILE`) — only use that in production with a persistent volume, for
+the same ephemeral-disk reason as photo storage below. `db:seed` and
+`db:import` are local-only tools and refuse to run when `NUXT_DB_URL` is set.
 
 ## Pet-photo storage
 

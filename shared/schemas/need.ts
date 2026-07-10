@@ -9,29 +9,29 @@ export const MAX_NEEDS_PER_DAY = 10;
 /** Measurement schemas shared by needs and care records (old messages kept). */
 export const quantityMeasurementSchema = z.object({
   value: z
-    .number({ error: 'Quantity value must be a number' })
-    .min(1, 'Quantity must be at least 1'),
-  unit: z.enum(['ml', 'g'], { error: 'Quantity unit must be ml or g' }),
+    .number({ error: 'validation.quantityNumber' })
+    .min(1, 'validation.quantityMin'),
+  unit: z.enum(['ml', 'g'], { error: 'validation.quantityUnit' }),
 });
 
 export const durationMeasurementSchema = z.object({
   value: z
-    .number({ error: 'Duration value must be a number' })
-    .min(1, 'Duration must be at least 1 minute')
-    .max(1440, 'Duration cannot be over 1440 minutes'),
-  unit: z.enum(['minutes'], { error: 'Duration unit must be minutes' }),
+    .number({ error: 'validation.durationNumber' })
+    .min(1, 'validation.durationMin')
+    .max(1440, 'validation.durationMax'),
+  unit: z.enum(['minutes'], { error: 'validation.durationUnit' }),
 });
 
 export const needSchema = z
   .object({
-    dateFor: z.string().refine(isValidDateOnly, { message: 'A valid date is required' }),
+    dateFor: z.string().refine(isValidDateOnly, { message: 'validation.needDateInvalid' }),
     category: z
       .string()
-      .min(3, 'Category must be at least 3 characters')
-      .max(50, 'Category must be at most 50 characters'),
+      .min(3, 'validation.categoryMin')
+      .max(50, 'validation.categoryMax'),
     description: z
       .string()
-      .max(1000, 'Description must be at most 1000 characters')
+      .max(1000, 'validation.needDescriptionMax')
       .optional()
       .default(''),
     quantity: quantityMeasurementSchema.optional(),
@@ -41,7 +41,7 @@ export const needSchema = z
     if (!hasExactlyOneMeasurement(need)) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Need must have exactly one measurement type',
+        message: 'validation.needMeasurement',
         path: ['quantity'],
       });
     }
@@ -58,11 +58,11 @@ export const needUpdateSchema = z
   .object({
     category: z
       .string()
-      .min(3, 'Category must be at least 3 characters')
-      .max(50, 'Category must be at most 50 characters'),
+      .min(3, 'validation.categoryMin')
+      .max(50, 'validation.categoryMax'),
     description: z
       .string()
-      .max(1000, 'Description must be at most 1000 characters')
+      .max(1000, 'validation.needDescriptionMax')
       .optional()
       .default(''),
     quantity: quantityMeasurementSchema.optional(),
@@ -72,7 +72,7 @@ export const needUpdateSchema = z
     if (need.quantity && need.duration) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Need must have exactly one measurement type',
+        message: 'validation.needMeasurement',
         path: ['quantity'],
       });
     }

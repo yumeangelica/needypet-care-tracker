@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (needRow.archived) {
-    badRequest('Care history for rolled-over days is frozen');
+    badRequest('Care history for rolled-over days is frozen', 'errors.dayFrozen');
   }
 
   const now = instantToIso(Temporal.Now.instant());

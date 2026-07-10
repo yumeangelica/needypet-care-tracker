@@ -24,7 +24,9 @@ export default defineEventHandler(async (event) => {
       .where(or(eq(users.userName, input.userName), eq(users.email, email))),
   );
   if (existing) {
-    badRequest(existing.userName === input.userName ? 'Username already exists' : 'Email already exists');
+    existing.userName === input.userName
+      ? badRequest('Username already exists', 'errors.userNameTaken')
+      : badRequest('Email already exists', 'errors.emailTaken');
   }
 
   const now = instantToIso(Temporal.Now.instant());

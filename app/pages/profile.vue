@@ -56,9 +56,7 @@ async function resendConfirmation(): Promise<void> {
     resendMessage.value = result.message;
   } catch (error) {
     resendError.value =
-      error instanceof FetchError && error.data?.message
-        ? error.data.message
-        : t('errors.generic');
+      resolveFetchError(error, t);
   } finally {
     resendBusy.value = false;
   }
@@ -95,7 +93,9 @@ function openProfileForm(): void {
 }
 
 function profileFieldError(field: string): string | null {
-  return profileFieldErrors.value[field]?.[0] ?? null;
+  // Zod messages are i18n keys (shared/schemas/*) — translate for display.
+  const key = profileFieldErrors.value[field]?.[0];
+  return key ? t(key) : null;
 }
 
 async function saveProfile() {
@@ -134,10 +134,8 @@ async function saveProfile() {
       profileFieldErrors.value = error.data.errorDetails;
     } else if (error instanceof FetchError && error.statusCode === 401) {
       profileFieldErrors.value = { currentPassword: [t('errors.invalidCurrentPassword')] };
-    } else if (error instanceof FetchError && error.data?.message) {
-      profileError.value = error.data.message;
     } else {
-      profileError.value = t('errors.generic');
+      profileError.value = resolveFetchError(error, t);
     }
   } finally {
     profileSaving.value = false;
@@ -170,7 +168,9 @@ function openPasswordForm(): void {
 }
 
 function passwordFieldError(field: string): string | null {
-  return passwordFieldErrors.value[field]?.[0] ?? null;
+  // Zod messages are i18n keys (shared/schemas/*) — translate for display.
+  const key = passwordFieldErrors.value[field]?.[0];
+  return key ? t(key) : null;
 }
 
 async function savePassword() {
@@ -202,10 +202,8 @@ async function savePassword() {
       passwordFieldErrors.value = error.data.errorDetails;
     } else if (error instanceof FetchError && error.statusCode === 401) {
       passwordFieldErrors.value = { currentPassword: [t('errors.invalidCurrentPassword')] };
-    } else if (error instanceof FetchError && error.data?.message) {
-      passwordError.value = error.data.message;
     } else {
-      passwordError.value = t('errors.generic');
+      passwordError.value = resolveFetchError(error, t);
     }
   } finally {
     passwordSaving.value = false;
@@ -246,10 +244,8 @@ async function confirmDelete(): Promise<void> {
   } catch (error) {
     if (error instanceof FetchError && error.statusCode === 401) {
       deleteError.value = t('errors.invalidCurrentPassword');
-    } else if (error instanceof FetchError && error.data?.message) {
-      deleteError.value = error.data.message;
     } else {
-      deleteError.value = t('errors.generic');
+      deleteError.value = resolveFetchError(error, t);
     }
   } finally {
     deleteBusy.value = false;
@@ -470,7 +466,7 @@ async function confirmDelete(): Promise<void> {
               <p class="rules-title">{{ $t('profile.strongPawCodeHas') }}</p>
               <ul>
                 <li v-for="checkItem in passwordChecks" :key="checkItem.id" :class="{ valid: checkItem.valid }">
-                  {{ checkItem.label }}
+                  {{ $t(checkItem.label) }}
                 </li>
               </ul>
             </div>

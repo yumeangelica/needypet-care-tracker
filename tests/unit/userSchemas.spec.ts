@@ -65,15 +65,17 @@ describe('passwordChangeSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('rejects a weak new password with the strength message', () => {
+  it('rejects a weak new password with the strength message key', () => {
     const result = passwordChangeSchema.safeParse({
       currentPassword: 'old-whatever',
       newPassword: 'weakpassword',
     });
     expect(result.success).toBe(false);
     if (!result.success) {
+      // Schema messages are i18n keys, translated at the display layer
+      // (see tests/unit/i18n.spec.ts for the localized copy).
       const messages = result.error.issues.map((issue) => issue.message).join(' ');
-      expect(messages).toMatch(/lowercase, uppercase, a number and a special character/);
+      expect(messages).toMatch(/validation\.passwordStrength/);
     }
   });
 

@@ -36,7 +36,9 @@ const errorMessage = ref('');
 const fieldErrors = ref<Record<string, string[]>>({});
 
 function firstError(field: string): string | null {
-  return fieldErrors.value[field]?.[0] ?? null;
+  // Zod messages are i18n keys (shared/schemas/*) — translate for display.
+  const key = fieldErrors.value[field]?.[0];
+  return key ? t(key) : null;
 }
 
 // The exactly-one-measurement schema issue lands on the `quantity` path;
@@ -89,10 +91,8 @@ async function submit() {
   } catch (error) {
     if (error instanceof FetchError && error.statusCode === 422 && error.data?.errorDetails) {
       fieldErrors.value = error.data.errorDetails;
-    } else if (error instanceof FetchError && error.data?.message) {
-      errorMessage.value = error.data.message;
     } else {
-      errorMessage.value = t('errors.generic');
+      errorMessage.value = resolveFetchError(error, t);
     }
   } finally {
     submitting.value = false;

@@ -25,7 +25,9 @@ const fieldErrors = ref<Record<string, string[]>>({});
 const announcement = ref('');
 
 function firstError(field: string): string | null {
-  return fieldErrors.value[field]?.[0] ?? null;
+  // Zod messages are i18n keys (shared/schemas/*) — translate for display.
+  const key = fieldErrors.value[field]?.[0];
+  return key ? t(key) : null;
 }
 
 async function addCaretaker(): Promise<void> {
@@ -53,10 +55,8 @@ async function addCaretaker(): Promise<void> {
   } catch (error) {
     if (error instanceof FetchError && error.statusCode === 422 && error.data?.errorDetails) {
       fieldErrors.value = error.data.errorDetails;
-    } else if (error instanceof FetchError && error.data?.message) {
-      errorMessage.value = error.data.message;
     } else {
-      errorMessage.value = t('errors.generic');
+      errorMessage.value = resolveFetchError(error, t);
     }
   } finally {
     adding.value = false;
@@ -80,9 +80,7 @@ async function confirmRemove(): Promise<void> {
     emit('changed');
   } catch (error) {
     errorMessage.value =
-      error instanceof FetchError && error.data?.message
-        ? error.data.message
-        : t('errors.generic');
+      resolveFetchError(error, t);
     removingCaretaker.value = null;
   } finally {
     removeBusy.value = false;

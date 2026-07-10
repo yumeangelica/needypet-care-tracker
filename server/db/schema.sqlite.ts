@@ -135,6 +135,9 @@ export const careRecords = sqliteTable(
   },
   (table) => [
     index('care_records_need_idx').on(table.needId),
+    // The diary, stats week window and streak all filter by pet and order/range
+    // on date — the reason petId is denormalized here in the first place.
+    index('care_records_pet_date_idx').on(table.petId, table.date),
     check(
       'care_records_exactly_one_measurement',
       sql`(${table.durationValue} IS NOT NULL) + (${table.quantityValue} IS NOT NULL) = 1`,

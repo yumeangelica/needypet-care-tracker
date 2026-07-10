@@ -25,7 +25,7 @@ export default defineEventHandler(async (event): Promise<Need> => {
     notFound('Need not found');
   }
   if (need.archived) {
-    badRequest('Need is archived');
+    badRequest('Need is archived', 'errors.needArchived');
   }
 
   const updatedRows = await db

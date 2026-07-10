@@ -23,7 +23,7 @@ export default defineEventHandler(async (event): Promise<Need> => {
   // is the owner's timezone that defines the pet's care day.
   const ownerToday = todayInTimeZone(user.timezone);
   if (compareDateOnly(input.dateFor, ownerToday) < 0) {
-    badRequest('Cannot add a need for a past day');
+    badRequest('Cannot add a need for a past day', 'errors.needPastDay');
   }
 
   const db = useDb();
@@ -32,7 +32,7 @@ export default defineEventHandler(async (event): Promise<Need> => {
     .from(needs)
     .where(and(eq(needs.petId, pet.id), eq(needs.dateFor, input.dateFor), eq(needs.archived, false)));
   if (dayRows.length >= MAX_NEEDS_PER_DAY) {
-    badRequest('Maximum number of needs for the day reached');
+    badRequest('Maximum number of needs for the day reached', 'needs.dayFull');
   }
 
   const now = instantToIso(Temporal.Now.instant());

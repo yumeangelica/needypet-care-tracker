@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   const input = await readValidatedBodyOr422(event, passwordChangeSchema);
 
   if (!(await verifyUserPassword(input.currentPassword, user.passwordHash))) {
-    unauthorized('Invalid current password');
+    unauthorized('Invalid current password', 'errors.invalidCurrentPassword');
   }
 
   await useDb()

@@ -26,7 +26,9 @@ const passwordChecks = computed(() =>
 );
 
 function firstError(field: string): string | null {
-  return fieldErrors.value[field]?.[0] ?? null;
+  // Zod messages are i18n keys (shared/schemas/*) — translate for display.
+  const key = fieldErrors.value[field]?.[0];
+  return key ? t(key) : null;
 }
 
 async function submit() {
@@ -57,10 +59,8 @@ async function submit() {
   } catch (error) {
     if (error instanceof FetchError && error.statusCode === 422 && error.data?.errorDetails) {
       fieldErrors.value = error.data.errorDetails;
-    } else if (error instanceof FetchError && error.data?.message) {
-      errorMessage.value = error.data.message;
     } else {
-      errorMessage.value = t('errors.generic');
+      errorMessage.value = resolveFetchError(error, t);
     }
   } finally {
     submitting.value = false;
@@ -140,7 +140,7 @@ async function submit() {
         <p class="rules-title">{{ $t('auth.strongPawCodeHas') }}</p>
         <ul>
           <li v-for="check in passwordChecks" :key="check.id" :class="{ valid: check.valid }">
-            {{ check.label }}
+            {{ $t(check.label) }}
           </li>
         </ul>
       </div>

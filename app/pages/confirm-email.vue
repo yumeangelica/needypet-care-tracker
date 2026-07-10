@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { MailCheck, PawPrint } from '@lucide/vue';
-import { FetchError } from 'ofetch';
 
 // Public: the link may be opened logged out or on another device.
 definePageMeta({ layout: 'auth' });
@@ -27,9 +26,7 @@ onMounted(async () => {
   } catch (error) {
     state.value = 'error';
     message.value =
-      error instanceof FetchError && error.data?.message
-        ? error.data.message
-        : t('errors.generic');
+      resolveFetchError(error, t);
   }
 });
 </script>
