@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event);
   checkRateLimit(event, `resend:user:${user.id}`, { max: 3, windowMs: 60 * 60_000 });
   if (user.emailConfirmed) {
-    badRequest('Your email is already confirmed');
+    badRequest('Your email is already confirmed', 'errors.emailAlreadyConfirmed');
   }
 
   const confirm = await createToken();

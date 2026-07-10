@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { BookOpen, ChartColumn, CirclePlus, Settings } from '@lucide/vue';
-import { FetchError } from 'ofetch';
 import { MAX_NEEDS_PER_DAY } from '#shared/schemas/need';
 import type { CareRecordWithActor, Need, NeedWithRecords, PetDetail, PetHistory } from '#shared/types/domain';
 import { compareDateOnly, todayInTimeZone } from '#shared/utils/date';
@@ -13,6 +12,16 @@ const route = useRoute();
 const { t } = useI18n();
 
 const { data: pet, status, refresh } = await useFetch<PetDetail>(`/api/pets/${route.params.petId}`);
+
+// One-shot notice from the create flow: the pet was saved but its chosen
+// photo failed to upload. The query param is stripped so a refresh or a
+// shared link doesn't repeat the alert.
+const photoUploadFailed = ref(route.query.photoFailed === '1');
+onMounted(() => {
+  if (photoUploadFailed.value) {
+    navigateTo(route.path, { replace: true });
+  }
+});
 
 // "Today" always follows the pet owner's timezone, never the browser's.
 // A one-minute ticker keeps it fresh across the owner's midnight.
@@ -158,9 +167,7 @@ async function onNeedSaved(): Promise<void> {
 }
 
 function fetchErrorMessage(error: unknown): string {
-  return error instanceof FetchError && error.data?.message
-    ? error.data.message
-    : t('errors.generic');
+  return resolveFetchError(error, t);
 }
 
 async function toggleNeed(need: Need): Promise<void> {
@@ -231,6 +238,9 @@ async function confirmLeave(): Promise<void> {
     </div>
 
     <DuoCard v-else class="pet-panel" :title="pet.name">
+      <p v-if="photoUploadFailed" class="custom-error-message" role="alert">
+        {{ $t('pets.photoUploadFailedNote') }}
+      </p>
       <template v-if="pet.isOwner" #actions>
         <NuxtLink :to="`/pets/${pet.id}/edit`" class="pet-edit-link" :aria-label="$t('pets.editAria', { name: pet.name })">
           <Settings :size="20" aria-hidden="true" />

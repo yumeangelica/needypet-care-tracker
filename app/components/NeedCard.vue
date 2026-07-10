@@ -9,7 +9,6 @@ import {
   Pencil,
   Trash2,
 } from '@lucide/vue';
-import { FetchError } from 'ofetch';
 import type { CareRecordWithActor, Need, NeedWithRecords } from '#shared/types/domain';
 import { compareDateOnly } from '#shared/utils/date';
 import { getMeasurementValue } from '#shared/utils/measurement';
@@ -103,9 +102,7 @@ async function markAllDone(): Promise<void> {
     emit('recorded', props.need);
   } catch (error) {
     completeError.value =
-      error instanceof FetchError && error.data?.message
-        ? error.data.message
-        : t('errors.generic');
+      resolveFetchError(error, t);
   } finally {
     completing.value = false;
   }
@@ -147,9 +144,7 @@ async function confirmRemoveRecord(): Promise<void> {
     emit('recorded', props.need);
   } catch (error) {
     completeError.value =
-      error instanceof FetchError && error.data?.message
-        ? error.data.message
-        : t('errors.generic');
+      resolveFetchError(error, t);
     removingRecord.value = null;
   } finally {
     removeBusy.value = false;

@@ -3,8 +3,13 @@ import type { Pet } from '#shared/types/domain';
 
 definePageMeta({ middleware: 'auth' });
 
-async function onSaved(pet: Pet): Promise<void> {
-  await navigateTo(`/pets/${pet.id}`);
+async function onSaved(pet: Pet, photoUploadFailed?: boolean): Promise<void> {
+  // The pet page surfaces the one-shot notice when the chosen photo
+  // could not be uploaded after the pet itself was created.
+  await navigateTo({
+    path: `/pets/${pet.id}`,
+    ...(photoUploadFailed ? { query: { photoFailed: '1' } } : {}),
+  });
 }
 </script>
 

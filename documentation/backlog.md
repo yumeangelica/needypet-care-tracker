@@ -33,6 +33,11 @@ Tick a box (`- [x]`) when done.
   digest is localized today).
 - [ ] **Rate-limit store** — the in-memory limiter resets on redeploy and isn't
   shared across instances; move to a durable/shared store before scaling out.
+- [ ] **TypeScript 7 (native compiler)** — blocked on vue-tsc / Vue language
+  tooling support; stays on TS 6 until the Vue toolchain catches up.
+- [ ] **Offline page is English-only** — `/offline` is prerendered at build
+  time, so its copy cannot follow the per-user locale. Accepted for a static
+  fallback page; revisit only if a bilingual static fallback is ever needed.
 
 ## Dependency audit — done (bun-native pass)
 
@@ -77,11 +82,13 @@ Web-standard, and free to host:
   branch in `useDb()`. A dev-SQLite/prod-Postgres split invites dialect drift
   (ILIKE, jsonb, date handling) and means testing a different engine than you
   deploy. `schema.ts` is now a direct re-export of `schema.sqlite.ts`.
-- [x] **Turso/libSQL-ready for prod.** `useDb()` has a documented seam: set
-  `NUXT_DB_URL` to a `libsql://` Turso URL and plug in a `drizzle-orm/libsql`
+- [x] **Turso/libSQL wired for prod.** `useDb()` switches on `NUXT_DB_URL`: a
+  `libsql://` Turso URL (+ `NUXT_DB_AUTH_TOKEN`) selects a `drizzle-orm/libsql`
   client — **same SQLite dialect, same schema, same migrations**, zero drift.
-  `@libsql/client` is intentionally not added until a host is chosen. Turso free
-  tier is ~9 GB. This is the recommended prod DB path.
+  `withTransaction` is provider-aware (drizzle's interactive transaction on
+  libSQL, the manual `begin immediate` path on bun:sqlite) and `bun run
+  db:migrate` applies the migration set to either target at deploy time. Turso
+  free tier is ~9 GB. This is the recommended prod DB path.
 - [x] **Full Web Crypto (no `node:crypto` in app code).** `server/utils/tokens.ts`
   uses `crypto.getRandomValues` + `crypto.subtle.digest`; the digest-secret compare
   in `daily-digest.post.ts` uses `subtle.digest` + a constant-time XOR (no

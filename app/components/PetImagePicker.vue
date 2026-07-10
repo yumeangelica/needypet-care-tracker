@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { FetchError } from 'ofetch';
 import type { Pet, PetImage, PetImageKey } from '#shared/types/domain';
 import { PET_IMAGE_KEYS, PET_IMAGE_OPTIONS } from '#shared/utils/petImages';
 
@@ -15,7 +14,7 @@ const props = defineProps<{
   currentImage?: PetImage | null;
 }>();
 
-const emit = defineEmits<{ uploaded: [pet: Pet] }>();
+const emit = defineEmits<{ uploaded: [pet: Pet]; presetPicked: [] }>();
 
 const { t } = useI18n();
 
@@ -40,13 +39,18 @@ const uploadError = ref('');
 // Once the user picks a preset radio, the upload tile drops its selected look
 // (saving the form will switch the pet back to the preset).
 const presetPicked = ref(false);
-watch(model, () => {
+// Also wired to the tiles' click handler: re-clicking the already-checked radio
+// (e.g. reverting from a chosen photo back to the default preset) fires no
+// change event, so the model watcher alone would never run.
+function markPresetPicked(): void {
   presetPicked.value = true;
   // Picking a preset clears any pending create-mode photo.
   if (isCreate.value) {
     setPendingPreview(null);
   }
-});
+  emit('presetPicked');
+}
+watch(model, markPresetPicked);
 
 // Local object-URL preview for a create-mode pending file (revoked on replace).
 const pendingPreview = ref<string | null>(null);
@@ -101,9 +105,7 @@ async function onFileChange(changeEvent: Event): Promise<void> {
     emit('uploaded', pet);
   } catch (error) {
     uploadError.value =
-      error instanceof FetchError && error.data?.message
-        ? error.data.message
-        : t('errors.uploadFailed');
+      resolveFetchError(error, t, 'errors.uploadFailed');
   } finally {
     uploading.value = false;
   }
@@ -119,6 +121,7 @@ async function onFileChange(changeEvent: Event): Promise<void> {
         :key="key"
         class="pet-image-option"
         :class="{ selected: model === key && !uploadSelected }"
+        @click="markPresetPicked"
       >
         <input v-model="model" type="radio" name="pet-image" :value="key" class="sr-only" />
         <img :src="PET_IMAGE_OPTIONS[key].src" alt="" class="pet-image-tile" />

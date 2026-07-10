@@ -53,16 +53,20 @@ describe('i18n formatting behaviour', () => {
   });
   const { t } = i18n.global;
 
-  it('pluralizes task counts in English (1 vs many)', () => {
+  it('localizes zod validation keys in both locales', () => {
+    // shared/schemas/* emit these keys as messages; forms translate them.
     i18n.global.locale.value = 'en';
-    expect(t('pets.tasksToday', 1, { named: { count: 1 } })).toBe('1 care task today');
-    expect(t('pets.tasksToday', 3, { named: { count: 3 } })).toBe('3 care tasks today');
+    expect(t('validation.petNameMin')).toBe('Name must be at least 3 characters');
+    i18n.global.locale.value = 'fi';
+    expect(t('validation.petNameMin')).toBe('Nimessä pitää olla vähintään 3 merkkiä');
   });
 
-  it('pluralizes task counts in Finnish (partitive for the plural form)', () => {
+  it('localizes server business-rule messageKeys in both locales', () => {
+    // server/utils/errors.ts sends these next to the English API message.
+    i18n.global.locale.value = 'en';
+    expect(t('errors.userNameTaken')).toBe('Username already exists');
     i18n.global.locale.value = 'fi';
-    expect(t('pets.tasksToday', 1, { named: { count: 1 } })).toBe('1 hoitotehtävä tänään');
-    expect(t('pets.tasksToday', 5, { named: { count: 5 } })).toBe('5 hoitotehtävää tänään');
+    expect(t('errors.userNameTaken')).toBe('Käyttäjänimi on jo varattu');
   });
 
   it('renders named interpolation with several args in both locales', () => {

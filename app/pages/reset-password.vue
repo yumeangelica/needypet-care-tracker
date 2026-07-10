@@ -51,10 +51,8 @@ async function submit(): Promise<void> {
   } catch (error) {
     if (error instanceof FetchError && error.statusCode === 422 && error.data?.errorDetails) {
       fieldErrors.value = error.data.errorDetails;
-    } else if (error instanceof FetchError && error.data?.message) {
-      errorMessage.value = error.data.message;
     } else {
-      errorMessage.value = t('errors.generic');
+      errorMessage.value = resolveFetchError(error, t);
     }
   } finally {
     submitting.value = false;
@@ -107,14 +105,14 @@ async function submit(): Promise<void> {
         class="custom-error-message"
         role="alert"
       >
-        {{ fieldErrors.newPassword[0] }}
+        {{ $t(fieldErrors.newPassword[0]!) }}
       </p>
 
       <div class="strong-password-note">
         <p class="rules-title">{{ $t('auth.strongPawCodeHas') }}</p>
         <ul>
           <li v-for="checkItem in passwordChecks" :key="checkItem.id" :class="{ valid: checkItem.valid }">
-            {{ checkItem.label }}
+            {{ $t(checkItem.label) }}
           </li>
         </ul>
       </div>

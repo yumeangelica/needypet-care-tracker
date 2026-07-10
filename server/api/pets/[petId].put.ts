@@ -24,7 +24,7 @@ export default defineEventHandler(async (event): Promise<Pet> => {
 
   // requirePetOwner guarantees the requester is the owner.
   if (input.birthday && isFutureDateOnly(input.birthday, user.timezone)) {
-    badRequest('Birthday cannot be in the future');
+    badRequest('Birthday cannot be in the future', 'errors.birthdayInFuture');
   }
 
   const updatedRows = await useDb()

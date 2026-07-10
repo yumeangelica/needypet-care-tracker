@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
   const input = await readValidatedBodyOr422(event, profileUpdateSchema);
 
   if (!(await verifyUserPassword(input.currentPassword, user.passwordHash))) {
-    unauthorized('Invalid current password');
+    unauthorized('Invalid current password', 'errors.invalidCurrentPassword');
   }
 
   const db = useDb();
@@ -33,7 +33,9 @@ export default defineEventHandler(async (event) => {
       ),
   );
   if (taken) {
-    badRequest(taken.userName === input.userName ? 'Username already exists' : 'Email already exists');
+    taken.userName === input.userName
+      ? badRequest('Username already exists', 'errors.userNameTaken')
+      : badRequest('Email already exists', 'errors.emailTaken');
   }
 
   const emailChanged = email !== user.email;

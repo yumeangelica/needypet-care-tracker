@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
       ),
   );
   if (!user) {
-    badRequest('That reset link has expired or was already used');
+    badRequest('That reset link has expired or was already used', 'errors.resetLinkExpired');
   }
 
   await db

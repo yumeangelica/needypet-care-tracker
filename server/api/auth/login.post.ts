@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
   const user = firstRow(await useDb().select().from(users).where(eq(users.userName, input.userName)));
   // Generic message on both misses: don't leak which accounts exist.
   if (!user || !(await verifyUserPassword(input.password, user.passwordHash))) {
-    unauthorized('Invalid credentials');
+    unauthorized('Invalid credentials', 'errors.invalidCredentials');
   }
 
   // Upgrade legacy bcrypt hashes to argon2id on a successful sign-in.

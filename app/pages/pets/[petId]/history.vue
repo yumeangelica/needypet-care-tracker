@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { FetchError } from 'ofetch';
 import type { PetHistory, PetHistoryEntry } from '#shared/types/domain';
 import { todayInTimeZone } from '#shared/utils/date';
 import { addDaysDateOnly } from '#shared/utils/date';
@@ -45,9 +44,7 @@ async function loadMore(): Promise<void> {
     extraRecords.value.push(...page.records);
   } catch (error) {
     loadError.value =
-      error instanceof FetchError && error.data?.message
-        ? error.data.message
-        : t('errors.generic');
+      resolveFetchError(error, t);
   } finally {
     loadingMore.value = false;
   }

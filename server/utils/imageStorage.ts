@@ -1,4 +1,3 @@
-import { rm } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
 // Relative (not #shared): this module is imported directly from vitest specs,
 // where the Nuxt '#shared' alias is not registered.
@@ -34,7 +33,14 @@ export class LocalDiskStorage implements ImageStorage {
   }
 
   async remove(key: string): Promise<void> {
-    await rm(this.resolveSafe(key), { force: true });
+    try {
+      await Bun.file(this.resolveSafe(key)).delete();
+    } catch (error) {
+      // A missing file is already "removed" (same force semantics as fs.rm).
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error;
+      }
+    }
   }
 
   /** Served by server/routes/uploads/[...path].get.ts. */

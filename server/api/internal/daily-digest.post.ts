@@ -51,31 +51,35 @@ export default defineEventHandler(async (event) => {
   let failed = 0;
 
   for (const user of candidates) {
-    const localDate = todayInTimeZone(user.timezone);
-    const localHour = hourInTimeZone(user.timezone);
-    if (
-      !shouldSendDigestNow({
-        digestOptIn: user.digestOptIn,
-        emailConfirmed: user.emailConfirmed,
-        localDate,
-        localHour,
-        lastDigestDate: user.lastDigestDate,
-        sendHour,
-      })
-    ) {
-      skipped += 1;
-      continue;
-    }
-
-    const sections = await collectOpenTaskSections(db, user.id, user.timezone);
-    if (sections.length === 0) {
-      // Nothing to nudge about. Don't stamp — a later task added today should
-      // still trigger a digest on a subsequent hourly run.
-      skipped += 1;
-      continue;
-    }
-
+    // The whole per-recipient step is fenced: one bad row (e.g. a stored
+    // timezone this runtime's ICU doesn't recognize) or one mailer error must
+    // not abort the batch (mirrors the forgot-password swallow). A user that
+    // fails before the stamp is retried next run.
     try {
+      const localDate = todayInTimeZone(user.timezone);
+      const localHour = hourInTimeZone(user.timezone);
+      if (
+        !shouldSendDigestNow({
+          digestOptIn: user.digestOptIn,
+          emailConfirmed: user.emailConfirmed,
+          localDate,
+          localHour,
+          lastDigestDate: user.lastDigestDate,
+          sendHour,
+        })
+      ) {
+        skipped += 1;
+        continue;
+      }
+
+      const sections = await collectOpenTaskSections(db, user.id, user.timezone);
+      if (sections.length === 0) {
+        // Nothing to nudge about. Don't stamp — a later task added today should
+        // still trigger a digest on a subsequent hourly run.
+        skipped += 1;
+        continue;
+      }
+
       await useMailer().send(
         dailyDigestMessage(user.email, sections, homeLink, user.locale as 'en' | 'fi'),
       );
@@ -86,9 +90,7 @@ export default defineEventHandler(async (event) => {
         .where(eq(users.id, user.id));
       sent += 1;
     } catch (error) {
-      // One recipient's failure must not abort the batch (mirrors the
-      // forgot-password swallow). The un-stamped user is retried next run.
-      console.error(`[daily-digest] Failed to send to ${user.email}:`, error);
+      console.error(`[daily-digest] Failed for ${user.email}:`, error);
       failed += 1;
     }
   }

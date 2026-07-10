@@ -1,6 +1,6 @@
 {
   "name": "needypet-care-tracker",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "type": "module",
   "private": true,
   "scripts": {
@@ -15,12 +15,14 @@
     "test:watch": "bun --bun vitest",
     "typecheck": "bun --bun nuxt typecheck",
     "db:generate": "bun --bun drizzle-kit generate",
+    "db:migrate": "bun server/db/migrate.ts",
     "db:seed": "bun server/db/seed.ts",
     "db:import": "bun server/db/import-legacy.ts"
   },
   "dependencies": {
     "@fontsource/comfortaa": "^5.2.8",
-    "@lucide/vue": "^1.23.0",
+    "@libsql/client": "^0.17.4",
+    "@lucide/vue": "^1.24.0",
     "@tailwindcss/vite": "^4.3.2",
     "drizzle-orm": "^0.45.2",
     "nuxt": "^4.4.8",

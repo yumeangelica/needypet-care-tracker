@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { useDb, withTransaction } from './index';
@@ -28,11 +27,11 @@ if (!bundleDir) {
   process.exit(1);
 }
 
-function readJsonFile(name: string): unknown {
+async function readJsonFile(name: string): Promise<unknown> {
   const path = join(bundleDir!, name);
   let text: string;
   try {
-    text = readFileSync(path, 'utf8');
+    text = await Bun.file(path).text();
   } catch {
     console.error(`Cannot read ${path}`);
     process.exit(1);
@@ -46,12 +45,12 @@ function readJsonFile(name: string): unknown {
 }
 
 const bundle: RawBundle = {
-  manifest: readJsonFile('manifest.json'),
-  users: readJsonFile('users.json'),
-  pets: readJsonFile('pets.json'),
-  petCaretakers: readJsonFile('pet_caretakers.json'),
-  needs: readJsonFile('needs.json'),
-  careRecords: readJsonFile('care_records.json'),
+  manifest: await readJsonFile('manifest.json'),
+  users: await readJsonFile('users.json'),
+  pets: await readJsonFile('pets.json'),
+  petCaretakers: await readJsonFile('pet_caretakers.json'),
+  needs: await readJsonFile('needs.json'),
+  careRecords: await readJsonFile('care_records.json'),
 };
 
 if (process.env.NUXT_DB_URL) {

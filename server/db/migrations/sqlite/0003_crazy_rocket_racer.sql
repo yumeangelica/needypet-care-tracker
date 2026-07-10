@@ -1,0 +1,1 @@
+CREATE INDEX `care_records_pet_date_idx` ON `care_records` (`pet_id`,`date`);

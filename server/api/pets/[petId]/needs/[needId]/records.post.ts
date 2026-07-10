@@ -13,11 +13,17 @@ import { toDomainNeed, toMeasurementColumns } from '../../../../../utils/mappers
 import { requirePetAccess } from '../../../../../utils/petAccess';
 import { requireAppUser } from '../../../../../utils/session';
 
-const REJECTION_MESSAGES: Record<RecordRejection, string> = {
-  'completed': 'Need is already completed',
-  'archived': 'Need is archived',
-  'measurement-mismatch': 'Care record measurement must match need measurement',
-  'not-today': 'Need date is not the same as the current date',
+const REJECTION_MESSAGES: Record<RecordRejection, { message: string; key: string }> = {
+  'completed': { message: 'Need is already completed', key: 'errors.needCompleted' },
+  'archived': { message: 'Need is archived', key: 'errors.needArchived' },
+  'measurement-mismatch': {
+    message: 'Care record measurement must match need measurement',
+    key: 'errors.measurementMismatch',
+  },
+  'not-today': {
+    message: 'Need date is not the same as the current date',
+    key: 'errors.recordNotToday',
+  },
 };
 
 /** Owner or caretaker logs care; the need auto-completes once the summed
@@ -49,7 +55,7 @@ export default defineEventHandler(async (event): Promise<Need> => {
   const need = toDomainNeed(needRow);
   const rejection = validateRecordAgainstNeed(need, input, ownerToday);
   if (rejection) {
-    badRequest(REJECTION_MESSAGES[rejection]);
+    badRequest(REJECTION_MESSAGES[rejection].message, REJECTION_MESSAGES[rejection].key);
   }
 
   const now = instantToIso(Temporal.Now.instant());
@@ -60,10 +66,10 @@ export default defineEventHandler(async (event): Promise<Need> => {
   if (input.timeOfDay) {
     recordDate = zonedDateTimeToUtcIso(needRow.dateFor, input.timeOfDay, ownerTimezone);
     if (recordDate > now) {
-      badRequest('Cannot log care in the future');
+      badRequest('Cannot log care in the future', 'errors.careInFuture');
     }
     if (todayInTimeZone(ownerTimezone, Temporal.Instant.from(recordDate)) !== needRow.dateFor) {
-      badRequest('Time must fall within the care day');
+      badRequest('Time must fall within the care day', 'errors.timeOutsideCareDay');
     }
   }
 

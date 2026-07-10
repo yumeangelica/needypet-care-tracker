@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { FetchError } from 'ofetch';
 import type { Pet, PetDetail } from '#shared/types/domain';
 
 definePageMeta({ middleware: 'auth' });
@@ -39,9 +38,7 @@ async function confirmRemove(): Promise<void> {
     await navigateTo('/home');
   } catch (error) {
     removeError.value =
-      error instanceof FetchError && error.data?.message
-        ? error.data.message
-        : t('errors.generic');
+      resolveFetchError(error, t);
     removing.value = false;
   } finally {
     removeBusy.value = false;

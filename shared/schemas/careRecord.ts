@@ -6,11 +6,11 @@ import { timezoneSchema } from './user';
 /** Optional wall-clock time in the OWNER's timezone; defaults to "now". */
 export const timeOfDaySchema = z
   .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must be in HH:MM format');
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'validation.timeFormat');
 
 export const careRecordSchema = z
   .object({
-    note: z.string().max(300, 'Note must be at most 300 characters').optional().default(''),
+    note: z.string().max(300, 'validation.noteMax').optional().default(''),
     timezone: timezoneSchema,
     quantity: quantityMeasurementSchema.optional(),
     duration: durationMeasurementSchema.optional(),
@@ -20,7 +20,7 @@ export const careRecordSchema = z
     if (!hasExactlyOneMeasurement(record)) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Care record must have exactly one measurement type',
+        message: 'validation.recordMeasurement',
         path: ['quantity'],
       });
     }
@@ -33,7 +33,7 @@ export const careRecordSchema = z
  */
 export const careRecordUpdateSchema = z
   .object({
-    note: z.string().max(300, 'Note must be at most 300 characters').optional().default(''),
+    note: z.string().max(300, 'validation.noteMax').optional().default(''),
     quantity: quantityMeasurementSchema.optional(),
     duration: durationMeasurementSchema.optional(),
     timeOfDay: timeOfDaySchema.optional(),
@@ -42,7 +42,7 @@ export const careRecordUpdateSchema = z
     if (!hasExactlyOneMeasurement(record)) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Care record must have exactly one measurement type',
+        message: 'validation.recordMeasurement',
         path: ['quantity'],
       });
     }

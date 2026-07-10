@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
   const input = await readValidatedBodyOr422(event, accountDeleteSchema);
 
   if (!(await verifyUserPassword(input.currentPassword, user.passwordHash))) {
-    unauthorized('Invalid current password');
+    unauthorized('Invalid current password', 'errors.invalidCurrentPassword');
   }
 
   const db = useDb();

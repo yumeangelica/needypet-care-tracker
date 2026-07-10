@@ -15,7 +15,7 @@ export default defineEventHandler(async (event): Promise<PetListItem> => {
   const input = await readValidatedBodyOr422(event, petSchema);
 
   if (input.birthday && isFutureDateOnly(input.birthday, user.timezone)) {
-    badRequest('Birthday cannot be in the future');
+    badRequest('Birthday cannot be in the future', 'errors.birthdayInFuture');
   }
 
   const image = input.image ?? DEFAULT_PET_IMAGE;

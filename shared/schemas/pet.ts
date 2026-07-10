@@ -12,18 +12,18 @@ export const petImageSchema = z.object({
  */
 export const birthdaySchema = z
   .string()
-  .refine(isValidDateOnly, { message: 'Birthday must be a valid date' });
+  .refine(isValidDateOnly, { message: 'validation.birthdayInvalid' });
 
 export const petSchema = z.object({
   name: z
     .string()
-    .min(3, 'Name must be at least 3 characters')
-    .max(40, 'Name must be at most 40 characters'),
-  species: z.string().max(30, 'Species must be at most 30 characters').optional().default(''),
-  breed: z.string().max(30, 'Breed must be at most 30 characters').optional().default(''),
+    .min(3, 'validation.petNameMin')
+    .max(40, 'validation.petNameMax'),
+  species: z.string().max(30, 'validation.speciesMax').optional().default(''),
+  breed: z.string().max(30, 'validation.breedMax').optional().default(''),
   description: z
     .string()
-    .max(2000, 'Description must be at most 2000 characters')
+    .max(2000, 'validation.petDescriptionMax')
     .optional()
     .default(''),
   birthday: birthdaySchema.nullable().optional(),

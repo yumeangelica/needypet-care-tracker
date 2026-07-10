@@ -26,16 +26,16 @@ export default defineEventHandler(async (event): Promise<Pet> => {
   const parts = await readMultipartFormData(event);
   const filePart = parts?.find((part) => part.name === 'image' && part.data.length > 0);
   if (!filePart) {
-    badRequest('No image file provided');
+    badRequest('No image file provided', 'errors.noImageFile');
   }
 
   const config = useRuntimeConfig().uploads;
   if (filePart.data.length > config.maxBytes) {
-    badRequest(`Image is too large (max ${Math.floor(config.maxBytes / (1024 * 1024))} MB)`);
+    badRequest(`Image is too large (max ${Math.floor(config.maxBytes / (1024 * 1024))} MB)`, 'errors.imageTooLarge');
   }
   const sniffed = sniffImageType(filePart.data);
   if (!sniffed) {
-    badRequest('Only JPEG, PNG or WebP images are allowed');
+    badRequest('Only JPEG, PNG or WebP images are allowed', 'errors.imageTypeNotAllowed');
   }
 
   const storage = useImageStorage();
