@@ -59,7 +59,7 @@ export default {
     // Register
     registerSubtitle: 'Luo tili, niin päästään hoivaamaan yhdessä 🐾',
     registerUsernamePlaceholder: 'Valitse käyttäjänimi',
-    emailPlaceholder: 'sinä@esimerkki.fi',
+    emailPlaceholder: "sinä{'@'}esimerkki.fi",
     registerPasswordPlaceholder: 'Luo salainen tassukoodi',
     timezoneHint: 'Tunnistettu laitteestasi – näin päivittäiset hoitotehtävät seuraavat sinun päivääsi.',
     registerToLogin: 'Jo perhettä? Tervetuloa takaisin – kirjaudu sisään',
@@ -349,7 +349,7 @@ export default {
     passwordMin: 'Salasanassa pitää olla vähintään 10 merkkiä',
     passwordMax: 'Salasanassa saa olla enintään 100 merkkiä',
     passwordStrength:
-      'Salasanassa pitää olla pieni ja iso kirjain, numero sekä erikoismerkki (!@#$%^&*)',
+      "Salasanassa pitää olla pieni ja iso kirjain, numero sekä erikoismerkki (!{'@'}#$%^&*)",
     passwordRequired: 'Salasana vaaditaan',
     currentPasswordRequired: 'Nykyinen salasana vaaditaan',
     tokenRequired: 'Tunniste vaaditaan',
@@ -358,7 +358,7 @@ export default {
     passwordRuleLowercase: 'Yksi pieni kirjain',
     passwordRuleUppercase: 'Yksi iso kirjain',
     passwordRuleDigit: 'Yksi numero',
-    passwordRuleSpecial: 'Yksi erikoismerkki (!@#$%^&*)',
+    passwordRuleSpecial: "Yksi erikoismerkki (!{'@'}#$%^&*)",
     petNameMin: 'Nimessä pitää olla vähintään 3 merkkiä',
     petNameMax: 'Nimessä saa olla enintään 40 merkkiä',
     speciesMax: 'Lajissa saa olla enintään 30 merkkiä',

@@ -44,6 +44,23 @@ describe('i18n message parity', () => {
   });
 });
 
+describe('i18n message compilation', () => {
+  // Messages compile lazily on first t(), so a syntax error (e.g. a raw "@",
+  // which vue-i18n reserves for linked messages - escape as {'@'}) would
+  // otherwise only surface as a runtime crash on the page that renders the
+  // key. Compiling every message here keeps that a unit-test failure.
+  it('compiles every message in both locales without throwing', () => {
+    const i18n = createI18n({ legacy: false, locale: 'en', fallbackLocale: 'en', messages: { en, fi } });
+    const { t } = i18n.global;
+    for (const locale of ['en', 'fi'] as const) {
+      i18n.global.locale.value = locale;
+      for (const key of flattenKeys(locale === 'en' ? en : fi)) {
+        expect(() => t(key), `${locale}: ${key}`).not.toThrow();
+      }
+    }
+  });
+});
+
 describe('i18n formatting behaviour', () => {
   const i18n = createI18n({
     legacy: false,
