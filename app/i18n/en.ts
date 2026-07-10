@@ -59,7 +59,7 @@ export default {
     // Register
     registerSubtitle: 'Make an account and start caring together 🐾',
     registerUsernamePlaceholder: 'Pick a username',
-    emailPlaceholder: 'you@example.com',
+    emailPlaceholder: "you{'@'}example.com",
     registerPasswordPlaceholder: 'Create a secret paw code',
     timezoneHint: 'Detected from your device - it keeps daily care tasks on your local day.',
     registerToLogin: 'Already family? Welcome back - log in',
@@ -352,7 +352,7 @@ export default {
     passwordMin: 'Password must be at least 10 characters',
     passwordMax: 'Password must be at most 100 characters',
     passwordStrength:
-      'Password must include lowercase, uppercase, a number and a special character (!@#$%^&*)',
+      "Password must include lowercase, uppercase, a number and a special character (!{'@'}#$%^&*)",
     passwordRequired: 'Password is required',
     currentPasswordRequired: 'Current password is required',
     tokenRequired: 'Token is required',
@@ -361,7 +361,7 @@ export default {
     passwordRuleLowercase: 'One lowercase letter',
     passwordRuleUppercase: 'One uppercase letter',
     passwordRuleDigit: 'One number',
-    passwordRuleSpecial: 'One special character (!@#$%^&*)',
+    passwordRuleSpecial: "One special character (!{'@'}#$%^&*)",
     petNameMin: 'Name must be at least 3 characters',
     petNameMax: 'Name must be at most 40 characters',
     speciesMax: 'Species must be at most 30 characters',
