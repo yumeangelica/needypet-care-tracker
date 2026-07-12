@@ -15,7 +15,7 @@ import { rollPetNeedsIfDue } from '../../utils/rollover';
  * Cron-triggered daily digest of unfinished care tasks. Intended to be called
  * hourly by an external scheduler; each user is mailed at most once a day, once
  * their own local clock passes the configured hour (see nuxt.config.ts digest.*
- * and documentation/deployment.md).
+ * and docs/deployment.md).
  *
  * Auth is a shared secret in the `x-digest-secret` header. There is no session:
  * this runs headless, so it can't use requireAppUser.

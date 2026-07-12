@@ -6,7 +6,7 @@ import type { ImportContext, PreparedRows, RawBundle } from './import/validate';
 import { validateBundle } from './import/validate';
 
 /**
- * Legacy JSON bundle importer (documentation/migration.md). All-or-nothing:
+ * Legacy JSON bundle importer (docs/migration.md). All-or-nothing:
  * the bundle is fully validated before the database is touched, and the
  * inserts run in a single transaction.
  *

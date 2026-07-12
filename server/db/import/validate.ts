@@ -19,7 +19,7 @@ import {
 } from './schemas';
 
 /**
- * Pure bundle validation for the legacy import (documentation/migration.md).
+ * Pure bundle validation for the legacy import (docs/migration.md).
  * No db/h3 imports so unit tests can exercise it without Nitro. Collects EVERY
  * failure instead of stopping at the first; the import is all-or-nothing.
  */

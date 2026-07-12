@@ -65,7 +65,7 @@ export default {
     registerToLogin: 'Already family? Welcome back - log in',
     // Forgot password
     forgotTitle: 'Forgot Your Paw Code?',
-    forgotSubtitle: "We'll email you a link to set a new one 🐾",
+    forgotSubtitle: "You'll get an email with a link to set a new one 🐾",
     sendResetLink: 'Send Reset Link',
     // Reset password
     resetTitle: 'Set a New Paw Code',
@@ -87,7 +87,7 @@ export default {
     noPetsYet: 'No pets yet',
     noPetsNote: 'Welcome your first pet to get started! 🐾',
     petsIHelpCareFor: 'Pets I Help Care For',
-    notFound: "We couldn't find that little one. 🐾",
+    notFound: 'No sign of that little one. 🐾',
     editAria: 'Edit {name}',
     description: 'Description',
     species: 'Species',
@@ -100,7 +100,7 @@ export default {
     speciesCat: 'cat',
     speciesBunny: 'bunny',
     // New pet
-    newPetIntro: 'Tell us about your new family member 🐾',
+    newPetIntro: 'Introduce your new family member 🐾',
     // Caretaker self-removal (leave)
     leaveTitle: 'Taking a break?',
     leaveNote:
@@ -319,7 +319,7 @@ export default {
     resetLinkExpired: 'That reset link has expired or was already used',
     emailAlreadyConfirmed: 'Your email is already confirmed',
     birthdayInFuture: 'Birthday cannot be in the future',
-    caretakerNotFound: "We couldn't find a pet lover with that username",
+    caretakerNotFound: 'No pet lover found with that username',
     caretakerIsOwner: 'You already take care of this pet as its owner',
     caretakerAlreadyHelping: 'That pet lover is already helping out',
     noUploadedPhoto: 'This pet has no uploaded photo',
