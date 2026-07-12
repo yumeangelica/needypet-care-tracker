@@ -4,7 +4,7 @@ import { isSupportedTimeZone, isValidDateOnly, isValidIsoTimestamp } from '../..
 import { hasExactlyOneMeasurement } from '../../../shared/utils/measurement';
 
 /**
- * Zod shapes for the legacy JSON export bundle (documentation/migration.md).
+ * Zod shapes for the legacy JSON export bundle (docs/migration.md).
  * Structural, per-row validation only; cross-file referential checks live in
  * validate.ts. Relative imports keep this module loadable from Vitest and CLI
  * commands without Nuxt aliases.

@@ -1,6 +1,6 @@
 {
   "name": "needypet-care-tracker",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "type": "module",
   "private": true,
   "scripts": {
@@ -14,6 +14,7 @@
     "test:integration": "bun --bun vitest run --config vitest.integration.config.ts",
     "test:watch": "bun --bun vitest",
     "typecheck": "bun --bun nuxt typecheck",
+    "verify": "bun run typecheck && bun run test",
     "db:generate": "bun --bun drizzle-kit generate",
     "db:migrate": "bun server/db/migrate.ts",
     "db:seed": "bun server/db/seed.ts",

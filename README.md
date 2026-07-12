@@ -16,10 +16,10 @@ Web Crypto powers tokens and R2 request signing, and the test suite runs under
 
 - Cookie-session auth (nuxt-auth-utils) with email confirmation, password
   reset, account deletion with cascades, and rate limiting on the auth
-  endpoints (`documentation/auth-audit.md`)
+  endpoints (`docs/security-model.md`)
 - Pets with preset portraits **or an uploaded photo** (chosen when creating or
   editing a pet, magic-byte validated, local disk in dev or Cloudflare R2 in
-  production, behind one storage abstraction — see `documentation/deployment.md`)
+  production, behind one storage abstraction — see `docs/deployment.md`)
 - Daily care tasks (needs): max 10/day, pause/resume, lazy day rollover in the
   owner's timezone; the dashboard shows each pet's done/total progress for today
 - Care records: full and partial logs with auto-completion, manual
@@ -29,11 +29,11 @@ Web Crypto powers tokens and R2 request signing, and the test suite runs under
   counts, per-category totals)
 - Opt-in daily email digest of unfinished care tasks, sent per user on their
   own local evening via a secret-guarded cron endpoint
-  (`documentation/deployment.md`)
-- Legacy JSON bundle importer (`documentation/migration.md`)
+  (`docs/deployment.md`)
+- Legacy JSON bundle importer (`docs/migration.md`)
 - Installable PWA: web manifest + Workbox service worker (auto-updating), maskable
   icons, and an offline fallback page — API responses are never cached
-  (`documentation/deployment.md`)
+  (`docs/deployment.md`)
 - English + Finnish UI (vue-i18n), language stored on the user profile and
   switchable from Profile — see *Internationalization* below
 
@@ -43,17 +43,17 @@ Web Crypto powers tokens and R2 request signing, and the test suite runs under
 | --- | --- |
 | `NUXT_SESSION_PASSWORD` | 32+ char secret sealing the session cookie (required) |
 | `NUXT_DB_FILE` | local SQLite path (default `.data/needypet.sqlite`) |
-| `NUXT_DB_URL` | set in production (a `libsql://` Turso URL) → uses the remote libSQL DB (`documentation/deployment.md`) |
+| `NUXT_DB_URL` | set in production (a `libsql://` Turso URL) → uses the remote libSQL DB (`docs/deployment.md`) |
 | `NUXT_DB_AUTH_TOKEN` | Turso auth token, required alongside a `libsql://` URL |
 | `NUXT_MAILER_PROVIDER` / `NUXT_MAILER_API_KEY` / `NUXT_MAILER_FROM` | `resend` + key + sender enables the HTTP mailer; unset = console mailer (dev) |
-| `NUXT_UPLOADS_PROVIDER` | `local` (default) or `r2` (Cloudflare R2) for pet photos (`documentation/deployment.md`) |
+| `NUXT_UPLOADS_PROVIDER` | `local` (default) or `r2` (Cloudflare R2) for pet photos (`docs/deployment.md`) |
 | `NUXT_UPLOADS_DIR` | pet photo directory for the local storage provider (default `.data/uploads`) |
 | `NUXT_UPLOADS_R2_ENDPOINT` / `NUXT_UPLOADS_R2_ACCESS_KEY_ID` / `NUXT_UPLOADS_R2_SECRET_ACCESS_KEY` / `NUXT_UPLOADS_R2_BUCKET` / `NUXT_UPLOADS_R2_PUBLIC_BASE_URL` | Cloudflare R2 config (required when the provider is `r2`) |
 | `NUXT_DIGEST_SECRET` | secret guarding the daily-digest cron endpoint; empty = disabled |
 | `NUXT_DIGEST_HOUR` | local hour (0–23) each user must reach before their digest sends (default `18`) |
 
 Full production setup (build, migrations, storage, digest cron) lives in
-`documentation/deployment.md`.
+`docs/deployment.md`.
 
 ## Layout
 
@@ -69,9 +69,12 @@ Full production setup (build, migrations, storage, digest cron) lives in
 - `public/` — static assets and PWA icons (`favicon.ico`, `pwa-192x192.png`,
   `pwa-512x512.png`, `maskable-512x512.png`, `apple-touch-icon.png`); the manifest
   and service worker are generated at build time by `@vite-pwa/nuxt`
-- `documentation/` — `deployment.md` (production environment, database, storage,
-  digest cron, PWA), `migration.md` (legacy import contract), `auth-audit.md`
-  (auth hardening notes)
+- `docs/` — `architecture.md` (system map and invariants), `domain-model.md`
+  (entities, permissions, date rules), `security-model.md` (auth and threat
+  model), `testing-strategy.md`, `deployment.md` (production environment,
+  database, storage, digest cron, PWA), `migration.md` (legacy import
+  contract) and `decisions/` (architecture decision records)
+- `tasks/` — `backlog.md` (roadmap) and `implementation-order.md`
 
 ## Internationalization
 

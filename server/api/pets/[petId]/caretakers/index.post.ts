@@ -26,7 +26,7 @@ export default defineEventHandler(async (event): Promise<PetCaretaker> => {
       .where(eq(users.userName, input.userName)),
   );
   if (!target) {
-    badRequest("We couldn't find a pet lover with that username", 'errors.caretakerNotFound');
+    badRequest('No pet lover found with that username', 'errors.caretakerNotFound');
   }
   if (target.id === pet.ownerId) {
     badRequest('You already take care of this pet as its owner', 'errors.caretakerIsOwner');

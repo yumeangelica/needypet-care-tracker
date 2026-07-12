@@ -65,7 +65,7 @@ export default {
     registerToLogin: 'Jo perhettä? Tervetuloa takaisin – kirjaudu sisään',
     // Forgot password
     forgotTitle: 'Unohtuiko tassukoodi?',
-    forgotSubtitle: 'Lähetämme sähköpostiisi linkin, jolla luot uuden 🐾',
+    forgotSubtitle: 'Saat sähköpostiisi linkin, jolla luot uuden 🐾',
     sendResetLink: 'Lähetä palautuslinkki',
     // Reset password
     resetTitle: 'Aseta uusi tassukoodi',
@@ -87,7 +87,7 @@ export default {
     noPetsYet: 'Ei vielä lemmikkejä',
     noPetsNote: 'Toivota ensimmäinen lemmikkisi tervetulleeksi ja aloita! 🐾',
     petsIHelpCareFor: 'Lemmikit, joita autan hoitamaan',
-    notFound: 'Emme löytäneet tuota pientä kaveria. 🐾',
+    notFound: 'Tuota pientä kaveria ei löytynyt. 🐾',
     editAria: 'Muokkaa: {name}',
     description: 'Kuvaus',
     species: 'Laji',
@@ -100,7 +100,7 @@ export default {
     speciesCat: 'kissa',
     speciesBunny: 'kani',
     // New pet
-    newPetIntro: 'Kerro meille uudesta perheenjäsenestäsi 🐾',
+    newPetIntro: 'Esittele uusi perheenjäsenesi 🐾',
     // Caretaker self-removal (leave)
     leaveTitle: 'Pidätkö taukoa?',
     leaveNote:
