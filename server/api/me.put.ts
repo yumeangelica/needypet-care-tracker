@@ -2,11 +2,14 @@ import { and, eq, ne, or } from 'drizzle-orm';
 import { profileUpdateSchema } from '#shared/schemas/user';
 import { instantToIso } from '#shared/utils/datetime';
 import { Temporal } from '#shared/utils/temporal';
-import { firstRow, useDb } from '../db';
+import { normalizeUserName } from '#shared/utils/userName';
+import { type Db, firstRow, useDb } from '../db';
 import { users } from '../db/schema';
-import { confirmEmailMessage, useMailer } from '../utils/mailer';
+import { confirmEmailMessage, sendMailBestEffort, useMailer } from '../utils/mailer';
 import { verifyUserPassword } from '../utils/password';
-import { requireAppUser, toPublicUser } from '../utils/session';
+import { checkRateLimit, resetRateLimit } from '../utils/rateLimit';
+import { type UserRow, requireAppUser, toPublicUser } from '../utils/session';
+import { publicOrigin } from '../utils/siteUrl';
 import { createToken, expiryFromNow } from '../utils/tokens';
 
 /**
@@ -17,60 +20,102 @@ import { createToken, expiryFromNow } from '../utils/tokens';
 export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event);
   const input = await readValidatedBodyOr422(event, profileUpdateSchema);
+  const email = input.email.toLowerCase();
+  const emailChanged = email !== user.email;
+  const origin = emailChanged ? publicOrigin(event) : null;
+  const mailer = emailChanged ? useMailer() : null;
+  const passwordKey = `password:user:${user.id}`;
+  await checkRateLimit(event, passwordKey, { max: 5, windowMs: 15 * 60_000 });
 
   if (!(await verifyUserPassword(input.currentPassword, user.passwordHash))) {
     unauthorized('Invalid current password', 'errors.invalidCurrentPassword');
   }
+  await resetRateLimit(passwordKey);
 
   const db = useDb();
-  const email = input.email.toLowerCase();
-  const taken = firstRow(
-    await db
-      .select({ userName: users.userName, email: users.email })
-      .from(users)
-      .where(
-        and(ne(users.id, user.id), or(eq(users.userName, input.userName), eq(users.email, email))),
-      ),
-  );
-  if (taken) {
-    taken.userName === input.userName
-      ? badRequest('Username already exists', 'errors.userNameTaken')
-      : badRequest('Email already exists', 'errors.emailTaken');
+  const userNameKey = normalizeUserName(input.userName);
+  const conflicts = await findUserConflicts(db, user.id, userNameKey, email);
+  if (conflicts.length > 0) {
+    rejectUserConflict(conflicts, userNameKey);
   }
 
-  const emailChanged = email !== user.email;
   const confirm = emailChanged ? await createToken() : null;
 
-  const updatedRows = await db
-    .update(users)
-    .set({
-      userName: input.userName,
-      email,
-      timezone: input.timezone,
-      locale: input.locale,
-      digestOptIn: input.digestOptIn,
-      ...(confirm
-        ? {
-            emailConfirmed: false,
-            emailConfirmToken: confirm.tokenHash,
-            emailConfirmExpiresAt: expiryFromNow(24),
-          }
-        : {}),
-      updatedAt: instantToIso(Temporal.Now.instant()),
-    })
-    .where(eq(users.id, user.id))
-    .returning();
-  const updated = updatedRows[0]!;
-
-  if (confirm) {
-    const confirmLink = `${getRequestURL(event).origin}/confirm-email?token=${confirm.token}`;
-    await useMailer().send(confirmEmailMessage(email, confirmLink));
+  let updated: UserRow | undefined;
+  try {
+    updated = firstRow(
+      await db
+        .update(users)
+        .set({
+          userName: input.userName,
+          userNameKey,
+          email,
+          timezone: input.timezone,
+          locale: input.locale,
+          digestOptIn: input.digestOptIn,
+          ...(confirm
+            ? {
+                emailConfirmed: false,
+                emailConfirmToken: confirm.tokenHash,
+                emailConfirmExpiresAt: expiryFromNow(24),
+              }
+            : {}),
+          updatedAt: instantToIso(Temporal.Now.instant()),
+        })
+        .where(eq(users.id, user.id))
+        .returning(),
+    );
+  } catch (error) {
+    const concurrentConflicts = await findUserConflicts(db, user.id, userNameKey, email);
+    if (concurrentConflicts.length === 0) {
+      throw error;
+    }
+    rejectUserConflict(concurrentConflicts, userNameKey);
+  }
+  if (!updated) {
+    unauthorized('User not found');
   }
 
   // Re-issue the session so its cached userName stays fresh.
   await setUserSession(event, {
-    user: { id: updated.id, userName: updated.userName, locale: updated.locale as 'en' | 'fi' },
+    user: {
+      id: updated.id,
+      userName: updated.userName,
+      sessionVersion: updated.sessionVersion,
+      locale: updated.locale as 'en' | 'fi',
+    },
   });
+
+  if (confirm && origin && mailer) {
+    const confirmLink = `${origin}/confirm-email?token=${confirm.token}`;
+    await sendMailBestEffort(
+      mailer,
+      confirmEmailMessage(email, confirmLink),
+      'profile-email-change',
+    );
+  }
 
   return { message: 'User updated successfully', user: toPublicUser(updated) };
 });
+
+async function findUserConflicts(db: Db, userId: string, userNameKey: string, email: string) {
+  return db
+    .select({ userNameKey: users.userNameKey, email: users.email })
+    .from(users)
+    .where(
+      and(
+        ne(users.id, userId),
+        or(eq(users.userNameKey, userNameKey), eq(users.email, email)),
+      ),
+    );
+}
+
+function rejectUserConflict(
+  conflicts: Array<{ userNameKey: string; email: string }>,
+  userNameKey: string,
+): never {
+  if (conflicts.some((row) => row.userNameKey === userNameKey)) {
+    badRequest('Username already exists', 'errors.userNameTaken');
+  }
+  badRequest('Email already exists', 'errors.emailTaken');
+}

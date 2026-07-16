@@ -40,3 +40,11 @@ export function tooManyRequests(message = 'Too many attempts. Please wait a mome
     data: { message, messageKey: 'errors.tooManyRequests' },
   });
 }
+
+export function serviceUnavailable(message: string, messageKey?: string): never {
+  throw createError({
+    statusCode: 503,
+    statusMessage: message,
+    data: { message, ...(messageKey ? { messageKey } : {}) },
+  });
+}

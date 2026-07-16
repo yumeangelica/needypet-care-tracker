@@ -206,6 +206,9 @@ describe('permission matrix', () => {
         cookie: owner.cookie,
       });
       expect(unknown.status).toBe(400);
+      expect(errorMessage(unknown.body)).toBe(
+        "That username can't be added as a caretaker for this pet",
+      );
 
       const self = await api(`/api/pets/${teamPet.id}/caretakers`, {
         method: 'POST',
@@ -213,7 +216,9 @@ describe('permission matrix', () => {
         cookie: owner.cookie,
       });
       expect(self.status).toBe(400);
-      expect(errorMessage(self.body)).toBe('You already take care of this pet as its owner');
+      expect(errorMessage(self.body)).toBe(
+        "That username can't be added as a caretaker for this pet",
+      );
 
       const duplicate = await api(`/api/pets/${teamPet.id}/caretakers`, {
         method: 'POST',
@@ -221,18 +226,44 @@ describe('permission matrix', () => {
         cookie: owner.cookie,
       });
       expect(duplicate.status).toBe(400);
-      expect(errorMessage(duplicate.body)).toBe('That pet lover is already helping out');
+      expect(errorMessage(duplicate.body)).toBe(
+        "That username can't be added as a caretaker for this pet",
+      );
     });
 
     it('owner invites a new caretaker', async () => {
-      const invitee = await createUser({ timezone: TZ });
+      const invitee = await createUser({
+        userName: `Mäyrä-${uniqueName('helper')}`,
+        email: `${uniqueName('helper-mail')}@example.com`,
+        timezone: TZ,
+      });
       const res = await api(`/api/pets/${teamPet.id}/caretakers`, {
         method: 'POST',
-        body: { userName: invitee.userName },
+        body: { userName: invitee.userName.toUpperCase() },
         cookie: owner.cookie,
       });
       expect(res.status).toBe(201);
       expect(res.body).toEqual({ id: invitee.id, userName: invitee.userName });
+    });
+
+    it('rate limits caretaker discovery attempts per owner', async () => {
+      const limitedOwner = await createUserWithSession({ timezone: TZ });
+      const limitedPet = await createPet(limitedOwner.id, { lastRolledNeedDate: today });
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        const res = await api(`/api/pets/${limitedPet.id}/caretakers`, {
+          method: 'POST',
+          body: { userName: uniqueName('missing-helper') },
+          cookie: limitedOwner.cookie,
+        });
+        expect(res.status).toBe(400);
+      }
+      const blocked = await api(`/api/pets/${limitedPet.id}/caretakers`, {
+        method: 'POST',
+        body: { userName: uniqueName('missing-helper') },
+        cookie: limitedOwner.cookie,
+      });
+      expect(blocked.status).toBe(429);
+      expect(blocked.headers.get('retry-after')).toBeTruthy();
     });
 
     it('removal: owner removes anyone, a caretaker only themself', async () => {

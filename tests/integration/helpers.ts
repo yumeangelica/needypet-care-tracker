@@ -7,6 +7,7 @@ import * as schema from '../../server/db/schema.sqlite';
 import { hashToken } from '../../server/utils/tokens';
 import { instantToIso } from '../../shared/utils/datetime';
 import { Temporal } from '../../shared/utils/temporal';
+import { normalizeUserName } from '../../shared/utils/userName';
 
 const { careRecords, needs, petCaretakers, pets, users } = schema;
 
@@ -151,6 +152,7 @@ export async function createUser(
     // this also exercises the legacy-hash back-compat path against real logins.
     passwordHash: await Bun.password.hash(password, { algorithm: 'bcrypt', cost: 4 }),
     userName,
+    userNameKey: normalizeUserName(userName),
     email,
     emailConfirmed: overrides.emailConfirmed ?? true,
     timezone,

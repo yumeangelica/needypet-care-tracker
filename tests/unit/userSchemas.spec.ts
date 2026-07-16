@@ -5,7 +5,26 @@ import {
   passwordChangeSchema,
   profileUpdateSchema,
   resetPasswordSchema,
+  userNameSchema,
 } from '../../shared/schemas/user';
+import { normalizeUserName } from '../../shared/utils/userName';
+
+describe('userNameSchema', () => {
+  it('accepts supported Unicode and rejects control or unsupported characters', () => {
+    expect(userNameSchema.safeParse('Paws-42').success).toBe(true);
+    expect(userNameSchema.safeParse('Änne').success).toBe(true);
+    expect(userNameSchema.safeParse('李雷').success).toBe(false);
+    expect(userNameSchema.safeParse('李雷三').success).toBe(true);
+    expect(userNameSchema.safeParse('line\nbreak').success).toBe(false);
+    expect(userNameSchema.safeParse('Paws🐾').success).toBe(false);
+  });
+
+  it('trims display input and normalizes canonical case variants to one key', () => {
+    expect(userNameSchema.parse('  Mäyrä  ')).toBe('Mäyrä');
+    expect(normalizeUserName('MÄYRÄ')).toBe(normalizeUserName('Mäyrä'));
+    expect(normalizeUserName('A\u030Asa')).toBe(normalizeUserName('Åsa'));
+  });
+});
 
 describe('profileUpdateSchema', () => {
   const valid = {

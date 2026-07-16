@@ -30,12 +30,15 @@ NUXT_DB_URL=libsql://<db>-<org>.turso.io NUXT_DB_AUTH_TOKEN=<token> bun run db:m
 | Variable | Purpose |
 | --- | --- |
 | `NUXT_SESSION_PASSWORD` | 32+ char secret sealing the session cookie (**required**) |
+| `NUXT_SITE_URL` | canonical public app URL used in emailed links, e.g. `https://needypet.example` (**required in production**) |
+| `NUXT_RATE_LIMIT_TRUST_PROXY` | set to `true` only behind the single trusted edge described below (default false) |
 | `NUXT_DB_FILE` | local SQLite path (default `.data/needypet.sqlite`) |
 | `NUXT_DB_URL` | set (a `libsql://` Turso URL) → uses the remote libSQL DB instead of the local file |
 | `NUXT_DB_AUTH_TOKEN` | Turso database auth token (required with a `libsql://` URL) |
-| `NUXT_MAILER_PROVIDER` | `resend` enables the HTTP mailer; unset = console mailer (dev) |
-| `NUXT_MAILER_API_KEY` | Resend API key (required when provider is `resend`) |
-| `NUXT_MAILER_FROM` | sender address, e.g. `NeedyPet <no-reply@yourdomain>` |
+| `NUXT_MAILER_PROVIDER` | production requires `resend`; unset is console mailer in dev only |
+| `NUXT_MAILER_API_KEY` | Resend API key (**required in production**) |
+| `NUXT_MAILER_FROM` | sender address, e.g. `NeedyPet <no-reply@yourdomain>` (**required in production**) |
+| `NUXT_MAILER_API_URL` | Resend-compatible HTTPS endpoint (defaults to Resend's API) |
 | `NUXT_UPLOADS_PROVIDER` | `local` (default) or `r2` (Cloudflare R2) for pet photos |
 | `NUXT_UPLOADS_DIR` | local photo directory (default `.data/uploads`; local provider only) |
 | `NUXT_UPLOADS_R2_ENDPOINT` | R2 S3 API endpoint, e.g. `https://<accountId>.r2.cloudflarestorage.com` |
@@ -45,6 +48,26 @@ NUXT_DB_URL=libsql://<db>-<org>.turso.io NUXT_DB_AUTH_TOKEN=<token> bun run db:m
 | `NUXT_UPLOADS_R2_PUBLIC_BASE_URL` | public read base, e.g. `https://pub-<hash>.r2.dev` or a custom domain |
 | `NUXT_DIGEST_SECRET` | shared secret guarding the digest cron endpoint; **empty = endpoint disabled (always 401)** |
 | `NUXT_DIGEST_HOUR` | local hour (0–23) each user must reach before that day's digest sends (default `18`) |
+
+## Public origin and proxy trust
+
+`NUXT_SITE_URL` must be the externally reachable HTTPS origin. Production
+mail links fail closed when it is missing, non-HTTPS or invalid; request `Host` headers are
+never used for confirmation, reset or digest links. Paths in the configured URL
+are discarded, so configure an origin such as `https://needypet.example`.
+
+Production email routes also fail closed before account mutation unless the
+mailer provider is `resend` with a non-empty API key and sender. Console mail is
+development-only because it intentionally prints copyable links and recipients.
+Resend requests abort after 10 seconds. Forgot-password hands token persistence
+and delivery to Nitro `waitUntil`; long-lived Bun hosts finish that promise in
+process, while serverless adapters must support Nitro's background-work hook.
+
+Rate-limit IP keys use the direct socket address by default. Set
+`NUXT_RATE_LIMIT_TRUST_PROXY=true` only when one trusted edge proxy either
+overwrites `X-Forwarded-For` or appends the client address it observed as the
+rightmost value. Leave the flag false for a directly exposed server or an
+unverified multi-proxy chain.
 
 ## Database (Turso)
 
@@ -69,6 +92,9 @@ With `NUXT_DB_URL` unset the app falls back to the local `bun:sqlite` file
 (`NUXT_DB_FILE`) — only use that in production with a persistent volume, for
 the same ephemeral-disk reason as photo storage below. `db:seed` and
 `db:import` are local-only tools and refuse to run when `NUXT_DB_URL` is set.
+The same database also stores atomic fixed-window rate-limit counters, so a
+persistent/shared database preserves abuse controls across deploys and app
+instances.
 
 ## Pet-photo storage
 

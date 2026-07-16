@@ -6,6 +6,7 @@ import { firstRow, useDb } from '../../db';
 import { users } from '../../db/schema';
 import { passwordResetMessage, useMailer } from '../../utils/mailer';
 import { checkRateLimit, rateLimitIp } from '../../utils/rateLimit';
+import { publicOrigin } from '../../utils/siteUrl';
 import { createToken, expiryFromNow } from '../../utils/tokens';
 
 /**
@@ -14,37 +15,54 @@ import { createToken, expiryFromNow } from '../../utils/tokens';
  * the previous token — the latest link wins.
  */
 export default defineEventHandler(async (event) => {
-  checkRateLimit(event, `forgot:ip:${rateLimitIp(event)}`, { max: 5, windowMs: 60 * 60_000 });
+  // Resolve production configuration before account lookup so configuration
+  // failures cannot reveal whether an address exists.
+  const origin = publicOrigin(event);
+  const mailer = useMailer();
+
+  await checkRateLimit(event, `forgot:ip:${rateLimitIp(event)}`, {
+    max: 5,
+    windowMs: 60 * 60_000,
+  });
 
   const input = await readValidatedBodyOr422(event, forgotPasswordSchema);
   const db = useDb();
   const email = input.email.toLowerCase();
 
   // Per-address cap keeps the endpoint from being used to flood a mailbox.
-  checkRateLimit(event, `forgot:email:${email}`, { max: 3, windowMs: 60 * 60_000 });
+  await checkRateLimit(event, `forgot:email:${email}`, { max: 3, windowMs: 60 * 60_000 });
 
   const user = firstRow(await db.select({ id: users.id }).from(users).where(eq(users.email, email)));
-  if (user) {
-    const reset = await createToken();
-    await db
-      .update(users)
-      .set({
-        passwordResetToken: reset.tokenHash,
-        passwordResetExpiresAt: expiryFromNow(1),
-        updatedAt: instantToIso(Temporal.Now.instant()),
-      })
-      .where(eq(users.id, user.id));
 
-    const resetLink = `${getRequestURL(event).origin}/reset-password?token=${reset.token}`;
-    try {
-      await useMailer().send(passwordResetMessage(email, resetLink));
-    } catch (error) {
-      // A mailer outage must not break the always-200 contract (that would
-      // also leak which emails have accounts). The token is stored, so a
-      // retried request simply issues a fresh link.
-      console.error('[forgot-password] Failed to send reset email:', error);
-    }
-  }
+  // Keep provider and token-work latency off the request path. Scheduling the
+  // same microtask for known and unknown addresses also keeps the observable
+  // response path identical after the account lookup. Nitro forwards
+  // waitUntil to deployment adapters that support background work.
+  event.waitUntil(
+    Promise.resolve().then(async () => {
+      if (!user) {
+        return;
+      }
+      try {
+        const reset = await createToken();
+        await db
+          .update(users)
+          .set({
+            passwordResetToken: reset.tokenHash,
+            passwordResetExpiresAt: expiryFromNow(1),
+            updatedAt: instantToIso(Temporal.Now.instant()),
+          })
+          .where(eq(users.id, user.id));
+
+        const resetLink = `${origin}/reset-password?token=${reset.token}`;
+        await mailer.send(passwordResetMessage(email, resetLink));
+      } catch {
+        // Keep the response identical for every address and avoid logging PII,
+        // tokens or provider response bodies.
+        console.error('[forgot-password] Reset delivery failed');
+      }
+    }),
+  );
 
   return { message: 'If that email is with us, a reset link is on its way. 🐾' };
 });

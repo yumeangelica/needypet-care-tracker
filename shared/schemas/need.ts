@@ -10,7 +10,8 @@ export const MAX_NEEDS_PER_DAY = 10;
 export const quantityMeasurementSchema = z.object({
   value: z
     .number({ error: 'validation.quantityNumber' })
-    .min(1, 'validation.quantityMin'),
+    .min(1, 'validation.quantityMin')
+    .max(100_000, 'validation.quantityMax'),
   unit: z.enum(['ml', 'g'], { error: 'validation.quantityUnit' }),
 });
 

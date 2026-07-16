@@ -38,6 +38,15 @@ describe('careRecordSchema', () => {
         .success,
     ).toBe(false);
   });
+
+  it('rejects a quantity over 100,000', () => {
+    expect(
+      careRecordSchema.safeParse({
+        timezone: 'Europe/Helsinki',
+        quantity: { value: 100_001, unit: 'g' },
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe('careRecordUpdateSchema', () => {

@@ -31,10 +31,11 @@ Tick a box (`- [x]`) when done.
   / ad-hoc Playwright).
 - [ ] **Confirmation/reset emails localized** to the user's locale (only the daily
   digest is localized today).
-- [ ] **Rate-limit store** — the in-memory limiter resets on redeploy and isn't
-  shared across instances; move to a durable/shared store before scaling out.
-- [ ] **TypeScript 7 (native compiler)** — blocked on vue-tsc / Vue language
-  tooling support; stays on TS 6 until the Vue toolchain catches up.
+- [x] **Rate-limit store** — fixed-window counters now use atomic upserts in the
+  shared SQLite/libSQL database and survive redeploys/app instances.
+- [ ] **Full TypeScript 7 migration** — TS7 already runs beside TS6 as a native
+  plain-TS canary in `bun run typecheck`; replacing TS6 remains blocked on
+  vue-tsc / Vue language tooling support.
 - [ ] **Offline page is English-only** — `/offline` is prerendered at build
   time, so its copy cannot follow the per-user locale. Accepted for a static
   fallback page; revisit only if a bilingual static fallback is ever needed.
@@ -65,9 +66,9 @@ Also in this pass:
   later dropped entirely (see "SQLite-only" below).
 - `vue-router` removed from `dependencies` — it is a direct dep of `nuxt` at the
   same range and had zero explicit imports (routing goes through Nuxt auto-imports).
-- `typescript` added as an explicit devDependency — the project runs `tsc` (via
-  `vue-tsc` / `nuxt typecheck`) directly, so it is declared rather than relied on
-  transitively. Node types come from `@types/bun` (no separate `@types/node`).
+- TypeScript 6 is explicit for `vue-tsc`/Nuxt, and TypeScript 7 is installed
+  beside it as the native plain-TS canary. Both run through Bun; types come
+  from `@types/bun` (no separate `@types/node`).
 
 The app is now bun-native end to end (runtime, DB, hashing, tests, scripts); Node
 is no longer required.

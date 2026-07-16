@@ -14,9 +14,9 @@ Web Crypto powers tokens and R2 request signing, and the test suite runs under
 
 ## Features
 
-- Cookie-session auth (nuxt-auth-utils) with email confirmation, password
-  reset, account deletion with cascades, and rate limiting on the auth
-  endpoints (`docs/security-model.md`)
+- Cookie-session auth (nuxt-auth-utils) with email confirmation, revocable
+  sessions, password reset, account deletion with cascades, and durable rate
+  limiting on auth and password-verifying endpoints (`docs/security-model.md`)
 - Pets with preset portraits **or an uploaded photo** (chosen when creating or
   editing a pet, magic-byte validated, local disk in dev or Cloudflare R2 in
   production, behind one storage abstraction — see `docs/deployment.md`)
@@ -42,10 +42,12 @@ Web Crypto powers tokens and R2 request signing, and the test suite runs under
 | Variable | Purpose |
 | --- | --- |
 | `NUXT_SESSION_PASSWORD` | 32+ char secret sealing the session cookie (required) |
+| `NUXT_SITE_URL` | canonical HTTPS origin for emailed links (required in production) |
+| `NUXT_RATE_LIMIT_TRUST_PROXY` | `true` only behind the documented single trusted edge proxy (default false) |
 | `NUXT_DB_FILE` | local SQLite path (default `.data/needypet.sqlite`) |
 | `NUXT_DB_URL` | set in production (a `libsql://` Turso URL) → uses the remote libSQL DB (`docs/deployment.md`) |
 | `NUXT_DB_AUTH_TOKEN` | Turso auth token, required alongside a `libsql://` URL |
-| `NUXT_MAILER_PROVIDER` / `NUXT_MAILER_API_KEY` / `NUXT_MAILER_FROM` | `resend` + key + sender enables the HTTP mailer; unset = console mailer (dev) |
+| `NUXT_MAILER_PROVIDER` / `NUXT_MAILER_API_KEY` / `NUXT_MAILER_FROM` | production requires `resend` + key + sender; an unset provider uses console mail only in dev |
 | `NUXT_UPLOADS_PROVIDER` | `local` (default) or `r2` (Cloudflare R2) for pet photos (`docs/deployment.md`) |
 | `NUXT_UPLOADS_DIR` | pet photo directory for the local storage provider (default `.data/uploads`) |
 | `NUXT_UPLOADS_R2_ENDPOINT` / `NUXT_UPLOADS_R2_ACCESS_KEY_ID` / `NUXT_UPLOADS_R2_SECRET_ACCESS_KEY` / `NUXT_UPLOADS_R2_BUCKET` / `NUXT_UPLOADS_R2_PUBLIC_BASE_URL` | Cloudflare R2 config (required when the provider is `r2`) |
@@ -108,7 +110,7 @@ interpolation are handled by vue-i18n (e.g. task counts, care-team announcements
   through a browser timezone. Care record dates are full UTC timestamps with
   the acting user's IANA timezone stored for audit.
 - Every need and care record has exactly one measurement: duration
-  (1–1440 minutes) or quantity (ml/g). A record must match its parent
+  (1–1440 minutes) or quantity (1–100,000 ml/g). A record must match its parent
   need's measurement type.
 - Owners control everything; caretakers see only their assigned pets and can
   view, log, and edit/delete only their own records. Rolled-over (archived)

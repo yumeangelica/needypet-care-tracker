@@ -24,3 +24,5 @@ Changing a decision means a new ADR that supersedes the old one (mark the old
 | [0010](0010-single-measurement-three-layers.md) | Exactly one measurement, enforced at three layers |
 | [0011](0011-r2-image-storage.md) | Cloudflare R2 (S3 REST, no SDK) for prod photos; local disk dev |
 | [0012](0012-error-message-key-localization.md) | English API messages + i18n `messageKey` for localization |
+| [0013](0013-revocable-sealed-cookie-sessions.md) | Revocable sealed-cookie sessions via a per-user version |
+| [0014](0014-bounded-single-measurements.md) | Exactly one bounded measurement per need and care record |

@@ -2,7 +2,8 @@ import { defineVitestConfig } from '@nuxt/test-utils/config';
 
 export default defineVitestConfig({
   test: {
-    // Fast node env by default; component tests opt into the nuxt
+    // `node` is Vitest's lightweight environment model; Vitest itself still
+    // runs inside Bun (`bun --bun vitest`). Component tests opt into the Nuxt
     // environment per-file with `// @vitest-environment nuxt`.
     // Integration tests need a running server and live behind their own
     // config (vitest.integration.config.ts / bun run test:integration).

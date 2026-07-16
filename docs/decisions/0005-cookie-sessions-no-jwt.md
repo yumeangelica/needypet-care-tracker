@@ -1,6 +1,6 @@
 # 0005 — Sealed cookie sessions (nuxt-auth-utils), no JWTs
 
-**Status**: Accepted
+**Status**: Superseded by [0013](0013-revocable-sealed-cookie-sessions.md)
 
 ## Context
 

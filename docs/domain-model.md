@@ -25,10 +25,13 @@ Schema conventions (any SQLite host behaves identically):
 
 ### `users`
 
-Account + settings: `userName` (unique), `email` (unique), `passwordHash`
+Account + settings: `userName` (international display spelling) plus internal
+`userNameKey` (NFKC + Unicode lowercase, uniquely indexed for login and
+caretaker lookup), `email` (unique), `passwordHash`
 (argon2id; imported legacy hashes are bcrypt until rehash-on-login),
 `emailConfirmed` + confirm token/expiry, password-reset token/expiry,
-`timezone` (IANA string, required), `locale` (`'en'` default | `'fi'`),
+`sessionVersion` (revokes stale sealed cookies), `timezone` (IANA string,
+required), `locale` (`'en'` default | `'fi'`),
 `digestOptIn` (default false), `lastDigestDate` (YYYY-MM-DD user-local,
 stamped on a sent digest).
 
@@ -78,10 +81,10 @@ computation).
 ## Measurements — exactly one shape
 
 Every need and every care record has **exactly one** measurement
-([ADR-0010](decisions/0010-single-measurement-three-layers.md)):
+([ADR-0014](decisions/0014-bounded-single-measurements.md)):
 
 - **duration**: 1–1440 minutes, unit `minutes`, or
-- **quantity**: ≥ 1, unit `ml` or `g`.
+- **quantity**: 1–100,000, unit `ml` or `g`.
 
 A record must match its parent need's measurement type
 (`measurementTypesMatch`, `shared/utils/measurement.ts`). Records may be

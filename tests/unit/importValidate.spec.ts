@@ -241,6 +241,25 @@ describe('validateBundle', () => {
     expectError(bundle, 'duplicate email');
   });
 
+  it('rejects case-insensitive duplicate usernames within the bundle', () => {
+    const bundle = makeBundle();
+    (bundle.users as Record<string, unknown>[])[1]!.userName = 'ANNA';
+    expectError(bundle, 'duplicate userName');
+  });
+
+  it('accepts supported Unicode usernames', () => {
+    const bundle = makeBundle();
+    (bundle.users as Record<string, unknown>[])[0]!.userName = 'Änne';
+    expect(validateBundle(bundle, emptyContext()).ok).toBe(true);
+  });
+
+  it('rejects canonically equivalent duplicate usernames', () => {
+    const bundle = makeBundle();
+    (bundle.users as Record<string, unknown>[])[0]!.userName = 'Ånna';
+    (bundle.users as Record<string, unknown>[])[1]!.userName = 'A\u030Anna';
+    expectError(bundle, 'duplicate userName');
+  });
+
   it('rejects a userName that already exists in the database', () => {
     const context = emptyContext();
     context.existingUserNames.add('anna');

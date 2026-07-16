@@ -3,8 +3,9 @@ import { defineConfig } from 'vitest/config';
 /**
  * Endpoint/integration tests: real HTTP against one built Nitro server that
  * global-setup boots on a throwaway SQLite database. Plain vitest config on
- * purpose — the specs run in node and talk to the server over fetch, so the
- * Nuxt test environment (and defineVitestConfig) is not needed here.
+ * purpose — the specs use Vitest's node environment model under Bun and talk
+ * to the server over fetch, so the Nuxt test environment (and
+ * defineVitestConfig) is not needed here.
  */
 export default defineConfig({
   test: {

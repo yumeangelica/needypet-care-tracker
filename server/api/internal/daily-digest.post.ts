@@ -10,6 +10,7 @@ import { dailyDigestMessage, useMailer } from '../../utils/mailer';
 import type { PetRow } from '../../utils/petAccess';
 import { checkRateLimit, rateLimitIp } from '../../utils/rateLimit';
 import { rollPetNeedsIfDue } from '../../utils/rollover';
+import { publicOrigin } from '../../utils/siteUrl';
 
 /**
  * Cron-triggered daily digest of unfinished care tasks. Intended to be called
@@ -34,11 +35,12 @@ export default defineEventHandler(async (event) => {
   }
 
   // Cheap abuse guard; the real gate is the secret above.
-  checkRateLimit(event, `digest:ip:${rateLimitIp(event)}`, { max: 60, windowMs: 60_000 });
+  await checkRateLimit(event, `digest:ip:${rateLimitIp(event)}`, { max: 60, windowMs: 60_000 });
 
   const sendHour = Number(config.hour);
   const db = useDb();
-  const homeLink = `${getRequestURL(event).origin}/home`;
+  const homeLink = `${publicOrigin(event)}/home`;
+  const mailer = useMailer();
 
   // Only confirmed, opted-in users can ever receive a digest.
   const candidates = await db
@@ -80,7 +82,7 @@ export default defineEventHandler(async (event) => {
         continue;
       }
 
-      await useMailer().send(
+      await mailer.send(
         dailyDigestMessage(user.email, sections, homeLink, user.locale as 'en' | 'fi'),
       );
       // Stamp only after a successful send so a mailer outage retries next run.
@@ -89,8 +91,8 @@ export default defineEventHandler(async (event) => {
         .set({ lastDigestDate: localDate, updatedAt: instantToIso(Temporal.Now.instant()) })
         .where(eq(users.id, user.id));
       sent += 1;
-    } catch (error) {
-      console.error(`[daily-digest] Failed for ${user.email}:`, error);
+    } catch {
+      console.error(`[daily-digest] Delivery failed for user ${user.id}`);
       failed += 1;
     }
   }

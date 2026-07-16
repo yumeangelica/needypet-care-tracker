@@ -1,4 +1,4 @@
-import { and, eq, gt } from 'drizzle-orm';
+import { and, eq, gt, sql } from 'drizzle-orm';
 import { resetPasswordSchema } from '#shared/schemas/user';
 import { instantToIso } from '#shared/utils/datetime';
 import { Temporal } from '#shared/utils/temporal';
@@ -10,11 +10,14 @@ import { hashToken } from '../../utils/tokens';
 
 /**
  * Public. Completing a reset also confirms the email — the link proves
- * mailbox ownership. Note: sessions are stateless cookies, so devices that
- * are already logged in stay logged in until their session expires.
+ * mailbox ownership. Bumping sessionVersion invalidates every existing
+ * sealed-cookie session for the account.
  */
 export default defineEventHandler(async (event) => {
-  checkRateLimit(event, `reset:ip:${rateLimitIp(event)}`, { max: 10, windowMs: 60 * 60_000 });
+  await checkRateLimit(event, `reset:ip:${rateLimitIp(event)}`, {
+    max: 10,
+    windowMs: 60 * 60_000,
+  });
 
   const input = await readValidatedBodyOr422(event, resetPasswordSchema);
   const db = useDb();
@@ -23,28 +26,25 @@ export default defineEventHandler(async (event) => {
   const tokenHash = await hashToken(input.token);
   const user = firstRow(
     await db
-      .select({ id: users.id })
-      .from(users)
+      .update(users)
+      .set({
+        passwordHash: await hashUserPassword(input.newPassword),
+        passwordResetToken: null,
+        passwordResetExpiresAt: null,
+        emailConfirmed: true,
+        emailConfirmToken: null,
+        emailConfirmExpiresAt: null,
+        sessionVersion: sql`${users.sessionVersion} + 1`,
+        updatedAt: now,
+      })
       .where(
         and(eq(users.passwordResetToken, tokenHash), gt(users.passwordResetExpiresAt, now)),
-      ),
+      )
+      .returning({ id: users.id }),
   );
   if (!user) {
     badRequest('That reset link has expired or was already used', 'errors.resetLinkExpired');
   }
-
-  await db
-    .update(users)
-    .set({
-      passwordHash: await hashUserPassword(input.newPassword),
-      passwordResetToken: null,
-      passwordResetExpiresAt: null,
-      emailConfirmed: true,
-      emailConfirmToken: null,
-      emailConfirmExpiresAt: null,
-      updatedAt: now,
-    })
-    .where(eq(users.id, user.id));
 
   return { message: 'Your paw code is updated! You can sign in now. 🐾' };
 });

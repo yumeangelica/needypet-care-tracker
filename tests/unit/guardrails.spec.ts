@@ -1,6 +1,3 @@
-import { readFileSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import en from '../../app/i18n/en';
 
@@ -12,47 +9,88 @@ import en from '../../app/i18n/en';
  * mention the forbidden things.
  */
 
-const projectRoot = fileURLToPath(new URL('../..', import.meta.url));
+const projectRoot = decodeURIComponent(new URL('../..', import.meta.url).pathname).replace(/\/$/, '');
+const sourceGlob = new Bun.Glob('**/*.{ts,vue}');
+const rasterGlob = new Bun.Glob('**/*.{png,jpg,jpeg,webp,ico}');
 
 function sourceFiles(): string[] {
   const files: string[] = [];
   for (const dir of ['app', 'server', 'shared']) {
-    for (const entry of readdirSync(resolve(projectRoot, dir), { recursive: true, withFileTypes: true })) {
-      if (entry.isFile() && /\.(ts|vue)$/.test(entry.name)) {
-        // parentPath is absolute here; keep repo-relative paths for readable failures.
-        files.push(join(entry.parentPath, entry.name).slice(projectRoot.length));
-      }
+    for (const entry of sourceGlob.scanSync({ cwd: `${projectRoot}/${dir}`, onlyFiles: true })) {
+      files.push(`${dir}/${entry}`);
     }
   }
   return files.sort();
 }
 
 /** Repo-relative files where `pattern` matches, with the rule's allowlist removed. */
-function filesMatching(pattern: RegExp, allowed: string[] = []): string[] {
-  return sourceFiles()
-    .filter((file) => !allowed.includes(file))
-    .filter((file) => pattern.test(readFileSync(resolve(projectRoot, file), 'utf8')));
+async function filesMatching(pattern: RegExp, allowed: string[] = []): Promise<string[]> {
+  const matches: string[] = [];
+  for (const file of sourceFiles()) {
+    if (!allowed.includes(file) && pattern.test(await Bun.file(`${projectRoot}/${file}`).text())) {
+      matches.push(file);
+    }
+  }
+  return matches;
+}
+
+function hasBytes(bytes: Uint8Array, offset: number, expected: number[]): boolean {
+  return expected.every((value, index) => bytes[offset + index] === value);
+}
+
+function rasterMagicMatches(file: string, bytes: Uint8Array): boolean {
+  const extension = file.split('.').at(-1)?.toLowerCase();
+  if (extension === 'png') {
+    return hasBytes(bytes, 0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  }
+  if (extension === 'jpg' || extension === 'jpeg') {
+    return hasBytes(bytes, 0, [0xff, 0xd8, 0xff]);
+  }
+  if (extension === 'webp') {
+    return hasBytes(bytes, 0, [0x52, 0x49, 0x46, 0x46]) &&
+      hasBytes(bytes, 8, [0x57, 0x45, 0x42, 0x50]);
+  }
+  if (extension === 'ico') {
+    return hasBytes(bytes, 0, [0x00, 0x00, 0x01, 0x00]);
+  }
+  return false;
 }
 
 describe('architecture guardrails', () => {
-  it('imports temporal-polyfill only through the shared/utils/temporal.ts seam (ADR-0004)', () => {
+  it('imports temporal-polyfill only through the shared/utils/temporal.ts seam (ADR-0004)', async () => {
     expect(
-      filesMatching(/from\s+['"]temporal-polyfill['"]/, ['shared/utils/temporal.ts']),
+      await filesMatching(/from\s+['"]temporal-polyfill['"]/, ['shared/utils/temporal.ts']),
     ).toEqual([]);
   });
 
-  it('never constructs a legacy Date — Temporal only (ADR-0004)', () => {
-    expect(filesMatching(/\bnew Date\s*\(/)).toEqual([]);
+  it('never constructs a legacy Date — Temporal only (ADR-0004)', async () => {
+    expect(await filesMatching(/\bnew Date\s*\(/)).toEqual([]);
   });
 
-  it('never imports node:crypto — Web Crypto and Bun natives only (ADR-0003)', () => {
+  it('never imports node:crypto — Web Crypto and Bun natives only (ADR-0003)', async () => {
     expect(
-      filesMatching(/from\s+['"]node:crypto['"]|require\(\s*['"]node:crypto['"]\s*\)/),
+      await filesMatching(/from\s+['"]node:crypto['"]|require\(\s*['"]node:crypto['"]\s*\)/),
     ).toEqual([]);
   });
 
-  it('stays store-free — no pinia or defineStore (ADR-0006)', () => {
-    expect(filesMatching(/from\s+['"]pinia['"]|\bdefineStore\s*\(/)).toEqual([]);
+  it('keeps raster file extensions aligned with their real formats', async () => {
+    const mismatches: string[] = [];
+    for (const dir of ['app', 'public']) {
+      for (const entry of rasterGlob.scanSync({ cwd: `${projectRoot}/${dir}`, onlyFiles: true })) {
+        const file = `${dir}/${entry}`;
+        const bytes = new Uint8Array(
+          await Bun.file(`${projectRoot}/${file}`).slice(0, 12).arrayBuffer(),
+        );
+        if (!rasterMagicMatches(file, bytes)) {
+          mismatches.push(file);
+        }
+      }
+    }
+    expect(mismatches.sort()).toEqual([]);
+  });
+
+  it('stays store-free — no pinia or defineStore (ADR-0006)', async () => {
+    expect(await filesMatching(/from\s+['"]pinia['"]|\bdefineStore\s*\(/)).toEqual([]);
   });
 
   it('keeps English UI copy free of first-person plural — no "we/our/us" (voice rule)', () => {
