@@ -71,7 +71,9 @@ const context: ImportContext = {
     needs: nonNull((await db.select({ v: needs.legacyId }).from(needs)).map((row) => row.v)),
     careRecords: nonNull((await db.select({ v: careRecords.legacyId }).from(careRecords)).map((row) => row.v)),
   },
-  existingUserNames: new Set((await db.select({ v: users.userName }).from(users)).map((row) => row.v)),
+  existingUserNames: new Set(
+    (await db.select({ v: users.userNameKey }).from(users)).map((row) => row.v),
+  ),
   existingEmails: new Set((await db.select({ v: users.email }).from(users)).map((row) => row.v)),
 };
 

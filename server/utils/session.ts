@@ -8,7 +8,7 @@ export type UserRow = typeof users.$inferSelect;
 /**
  * Requires a valid session cookie AND a still-existing user row. Loading the
  * fresh row per request keeps deleted/edited accounts behaving correctly
- * (the session payload only ever stores the user id).
+ * while the small payload carries id, display name, locale and session version.
  */
 export async function requireAppUser(event: H3Event): Promise<UserRow> {
   const session = await requireUserSession(event);
@@ -16,6 +16,10 @@ export async function requireAppUser(event: H3Event): Promise<UserRow> {
   if (!row) {
     await clearUserSession(event);
     unauthorized('User not found');
+  }
+  if (session.user.sessionVersion !== row.sessionVersion) {
+    await clearUserSession(event);
+    unauthorized('Session expired');
   }
   return row;
 }

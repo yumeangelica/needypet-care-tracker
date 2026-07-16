@@ -4,6 +4,7 @@ import { useDb } from '../db';
 import { pets, users } from '../db/schema';
 import { removeStoredImageQuietly } from '../utils/imageStorage';
 import { verifyUserPassword } from '../utils/password';
+import { checkRateLimit, resetRateLimit } from '../utils/rateLimit';
 import { requireAppUser } from '../utils/session';
 
 /**
@@ -15,10 +16,13 @@ import { requireAppUser } from '../utils/session';
 export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event);
   const input = await readValidatedBodyOr422(event, accountDeleteSchema);
+  const passwordKey = `password:user:${user.id}`;
+  await checkRateLimit(event, passwordKey, { max: 5, windowMs: 15 * 60_000 });
 
   if (!(await verifyUserPassword(input.currentPassword, user.passwordHash))) {
     unauthorized('Invalid current password', 'errors.invalidCurrentPassword');
   }
+  await resetRateLimit(passwordKey);
 
   const db = useDb();
   // Collect owned pets' photo keys before the cascade removes the rows.

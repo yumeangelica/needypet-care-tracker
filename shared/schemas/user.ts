@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { isSupportedTimeZone } from '../utils/date';
+import { USER_NAME_PATTERN } from '../utils/userName';
 
 /**
  * Password strength rules (ported from the old app): min 10 chars with at
@@ -30,8 +31,10 @@ export const strongPasswordSchema = z
 
 export const userNameSchema = z
   .string()
+  .trim()
   .min(3, 'validation.userNameMin')
-  .max(40, 'validation.userNameMax');
+  .max(40, 'validation.userNameMax')
+  .regex(USER_NAME_PATTERN, 'validation.userNameCharacters');
 
 export const emailSchema = z
   .email('validation.email')

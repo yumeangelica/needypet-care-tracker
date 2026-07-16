@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { durationMeasurementSchema, quantityMeasurementSchema } from '../../../shared/schemas/need';
 import { isSupportedTimeZone, isValidDateOnly, isValidIsoTimestamp } from '../../../shared/utils/date';
 import { hasExactlyOneMeasurement } from '../../../shared/utils/measurement';
+import { USER_NAME_PATTERN } from '../../../shared/utils/userName';
 
 /**
  * Zod shapes for the legacy JSON export bundle (docs/migration.md).
@@ -52,7 +53,12 @@ export const manifestSchema = z.object({
 
 export const legacyUserSchema = z.object({
   legacyId: legacyIdSchema,
-  userName: z.string().min(1),
+  userName: z
+    .string()
+    .trim()
+    .min(3)
+    .max(40)
+    .regex(USER_NAME_PATTERN, 'Username contains unsupported characters'),
   email: z
     .email('Invalid email')
     .transform((value) => value.toLowerCase()),

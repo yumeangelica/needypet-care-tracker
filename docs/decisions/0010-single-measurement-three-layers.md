@@ -1,6 +1,6 @@
 # 0010 — Exactly one measurement, enforced at three layers
 
-**Status**: Accepted
+**Status**: Superseded by [0014](0014-bounded-single-measurements.md)
 
 ## Context
 

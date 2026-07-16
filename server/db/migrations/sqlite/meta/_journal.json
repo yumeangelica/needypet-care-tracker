@@ -29,6 +29,13 @@
       "when": 1783629917377,
       "tag": "0003_crazy_rocket_racer",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1784180949026,
+      "tag": "0004_blue_fenris",
+      "breakpoints": true
     }
   ]
 }

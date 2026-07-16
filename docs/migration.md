@@ -41,7 +41,7 @@ Counts must equal the row counts of each file; a mismatch aborts the import.
 ```jsonc
 [{
   "legacyId": "mongo-object-id",
-  "userName": "…",
+  "userName": "…",           // Unicode-safe; unique by NFKC + lowercase key
   "email": "…",              // lowercased on import
   "passwordHash": "$2b$10$…", // bcrypt salt-10, imported verbatim (login keeps working)
   "emailConfirmed": true,
@@ -129,7 +129,8 @@ users → pets → pet_caretakers → needs → care_records
   (`hasExactlyOneMeasurement`), with valid units and value ranges.
 - Every care record's measurement type matches its parent need's
   (`measurementTypesMatch`).
-- No duplicate `legacyId` within a file; `userName`/`email` unique.
+- No duplicate `legacyId` within a file; `userName` unique
+  case-insensitively and `email` unique after lowercasing.
 
 The referenced validators already exist in `shared/utils/date.ts` and
 `shared/utils/measurement.ts` and are unit-tested.

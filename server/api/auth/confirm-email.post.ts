@@ -12,7 +12,10 @@ import { hashToken } from '../../utils/tokens';
  * One generic failure message: no oracle for token-vs-expiry.
  */
 export default defineEventHandler(async (event) => {
-  checkRateLimit(event, `confirm:ip:${rateLimitIp(event)}`, { max: 10, windowMs: 60 * 60_000 });
+  await checkRateLimit(event, `confirm:ip:${rateLimitIp(event)}`, {
+    max: 10,
+    windowMs: 60 * 60_000,
+  });
 
   const input = await readValidatedBodyOr422(event, confirmEmailSchema);
   const db = useDb();
@@ -21,25 +24,21 @@ export default defineEventHandler(async (event) => {
   const tokenHash = await hashToken(input.token);
   const user = firstRow(
     await db
-      .select({ id: users.id })
-      .from(users)
+      .update(users)
+      .set({
+        emailConfirmed: true,
+        emailConfirmToken: null,
+        emailConfirmExpiresAt: null,
+        updatedAt: now,
+      })
       .where(
         and(eq(users.emailConfirmToken, tokenHash), gt(users.emailConfirmExpiresAt, now)),
-      ),
+      )
+      .returning({ id: users.id }),
   );
   if (!user) {
     badRequest('That confirmation link has expired or was already used', 'errors.confirmLinkExpired');
   }
-
-  await db
-    .update(users)
-    .set({
-      emailConfirmed: true,
-      emailConfirmToken: null,
-      emailConfirmExpiresAt: null,
-      updatedAt: now,
-    })
-    .where(eq(users.id, user.id));
 
   return { message: 'Your email is confirmed! 🐾' };
 });

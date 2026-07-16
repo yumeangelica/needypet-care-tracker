@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { check, index, integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { check, index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 /**
  * The single database schema (dev bun:sqlite, prod libSQL/Turso — same dialect).
@@ -9,27 +9,50 @@ import { check, index, integer, primaryKey, real, sqliteTable, text } from 'driz
  * - timestamps as TEXT ISO-8601 UTC
  *   (both parsed to Temporal in shared/utils/{date,datetime}.ts, never stored as Temporal)
  * - integer({ mode: 'boolean' }) for boolean columns
- * Every table keeps a nullable legacy_id for future Mongo import traceability.
+ * Every domain table keeps a nullable legacy_id for future Mongo import traceability.
  */
 
-export const users = sqliteTable('users', {
-  id: text('id').primaryKey(),
-  legacyId: text('legacy_id').unique(),
-  userName: text('user_name').notNull().unique(),
-  email: text('email').notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
-  emailConfirmed: integer('email_confirmed', { mode: 'boolean' }).notNull().default(false),
-  emailConfirmToken: text('email_confirm_token'),
-  emailConfirmExpiresAt: text('email_confirm_expires_at'),
-  passwordResetToken: text('password_reset_token'),
-  passwordResetExpiresAt: text('password_reset_expires_at'),
-  timezone: text('timezone').notNull(),
-  locale: text('locale').notNull().default('en'), // UI language: 'en' (default) or 'fi'
-  digestOptIn: integer('digest_opt_in', { mode: 'boolean' }).notNull().default(false),
-  lastDigestDate: text('last_digest_date'), // YYYY-MM-DD user-local, stamped on a sent digest
-  createdAt: text('created_at').notNull(),
-  updatedAt: text('updated_at').notNull(),
-});
+export const users = sqliteTable(
+  'users',
+  {
+    id: text('id').primaryKey(),
+    legacyId: text('legacy_id').unique(),
+    userName: text('user_name').notNull().unique(),
+    userNameKey: text('user_name_key').notNull(),
+    email: text('email').notNull().unique(),
+    passwordHash: text('password_hash').notNull(),
+    emailConfirmed: integer('email_confirmed', { mode: 'boolean' }).notNull().default(false),
+    emailConfirmToken: text('email_confirm_token'),
+    emailConfirmExpiresAt: text('email_confirm_expires_at'),
+    passwordResetToken: text('password_reset_token'),
+    passwordResetExpiresAt: text('password_reset_expires_at'),
+    // Bumped on password reset/change; requireAppUser rejects session cookies
+    // carrying an older value, so stateless sessions become revocable.
+    sessionVersion: integer('session_version').notNull().default(0),
+    timezone: text('timezone').notNull(),
+    locale: text('locale').notNull().default('en'), // UI language: 'en' (default) or 'fi'
+    digestOptIn: integer('digest_opt_in', { mode: 'boolean' }).notNull().default(false),
+    lastDigestDate: text('last_digest_date'), // YYYY-MM-DD user-local, stamped on a sent digest
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    // NFKC + Unicode-lower key shared by login, uniqueness, caretaker add and
+    // legacy import. Stored display casing stays untouched.
+    uniqueIndex('users_user_name_key_idx').on(table.userNameKey),
+  ],
+);
+
+/** Shared fixed-window counters for abuse-sensitive endpoints. */
+export const rateLimits = sqliteTable(
+  'rate_limits',
+  {
+    key: text('key').primaryKey(),
+    count: integer('count').notNull(),
+    resetAt: text('reset_at').notNull(),
+  },
+  (table) => [index('rate_limits_reset_at_idx').on(table.resetAt)],
+);
 
 export const pets = sqliteTable(
   'pets',

@@ -11,12 +11,21 @@ export interface Mailer {
   send(message: MailMessage): Promise<void>;
 }
 
+export interface MailerConfig {
+  provider: string;
+  apiUrl: string;
+  apiKey: string;
+  from: string;
+}
+
+const MAILER_REQUEST_TIMEOUT_MS = 10_000;
+
 /**
  * Dev mailer: prints the message to the server console so the links are
  * copy-pasteable locally. A production adapter (SMTP/API) plugs in here,
  * switched on runtime config, without touching any calling code.
  */
-class ConsoleMailer implements Mailer {
+export class ConsoleMailer implements Mailer {
   async send(message: MailMessage): Promise<void> {
     console.log(
       [
@@ -41,6 +50,7 @@ export class ResendMailer implements Mailer {
   constructor(
     private readonly options: { apiUrl: string; apiKey: string; from: string },
     private readonly fetchImpl: typeof globalThis.fetch = globalThis.fetch,
+    private readonly timeoutMs = MAILER_REQUEST_TIMEOUT_MS,
   ) {}
 
   async send(message: MailMessage): Promise<void> {
@@ -56,11 +66,17 @@ export class ResendMailer implements Mailer {
         subject: message.subject,
         text: message.text,
       }),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
     if (!response.ok) {
-      const body = (await response.text().catch(() => '')).slice(0, 300);
-      throw new Error(`Mailer request failed with status ${response.status}: ${body}`);
+      throw new MailerDeliveryError(response.status);
     }
+  }
+}
+
+class MailerDeliveryError extends Error {
+  constructor(readonly status: number) {
+    super(`Mailer request failed with status ${status}`);
   }
 }
 
@@ -69,16 +85,61 @@ let mailer: Mailer | null = null;
 export function useMailer(): Mailer {
   if (!mailer) {
     const config = useRuntimeConfig().mailer;
-    if (config.provider === 'resend' && config.apiKey && config.from) {
-      mailer = new ResendMailer({ apiUrl: config.apiUrl, apiKey: config.apiKey, from: config.from });
-    } else {
-      if (!import.meta.dev) {
-        console.warn('[mailer] No production mailer configured — mail goes to the console only.');
-      }
-      mailer = new ConsoleMailer();
-    }
+    mailer = createMailer(config, process.env.NODE_ENV === 'production');
   }
   return mailer;
+}
+
+export function createMailer(
+  config: MailerConfig,
+  isProduction: boolean,
+  fetchImpl: typeof globalThis.fetch = globalThis.fetch,
+): Mailer {
+  const provider = config.provider.trim();
+  if (!provider) {
+    if (isProduction) {
+      throw new Error('NUXT_MAILER_PROVIDER=resend is required in production');
+    }
+    return new ConsoleMailer();
+  }
+  if (provider !== 'resend') {
+    throw new Error(`Unsupported mailer provider: ${provider}`);
+  }
+  if (!config.apiKey.trim() || !config.from.trim()) {
+    throw new Error('NUXT_MAILER_API_KEY and NUXT_MAILER_FROM are required for Resend');
+  }
+
+  const apiUrl = new URL(config.apiUrl);
+  const loopback = ['127.0.0.1', '::1', 'localhost'].includes(apiUrl.hostname);
+  if (
+    !['http:', 'https:'].includes(apiUrl.protocol) ||
+    apiUrl.username ||
+    apiUrl.password ||
+    (isProduction && apiUrl.protocol !== 'https:' && !loopback)
+  ) {
+    throw new Error('Mailer API URL must be a credential-free HTTPS URL in production');
+  }
+
+  return new ResendMailer(
+    { apiUrl: apiUrl.toString(), apiKey: config.apiKey, from: config.from },
+    fetchImpl,
+  );
+}
+
+/** Sends optional mail without leaking recipient, token or provider response data. */
+export async function sendMailBestEffort(
+  targetMailer: Mailer,
+  message: MailMessage,
+  context: string,
+): Promise<boolean> {
+  try {
+    await targetMailer.send(message);
+    return true;
+  } catch (error) {
+    const status = error instanceof MailerDeliveryError ? ` (provider status ${error.status})` : '';
+    console.error(`[${context}] Email delivery failed${status}`);
+    return false;
+  }
 }
 
 export function confirmEmailMessage(to: string, link: string): MailMessage {

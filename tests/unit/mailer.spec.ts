@@ -1,9 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   confirmEmailMessage,
+  ConsoleMailer,
+  createMailer,
   dailyDigestMessage,
   passwordResetMessage,
   ResendMailer,
+  sendMailBestEffort,
 } from '../../server/utils/mailer';
 
 const OPTIONS = {
@@ -49,12 +52,67 @@ describe('ResendMailer', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('throws with status and trimmed body on a non-2xx response', async () => {
+  it('throws with status but not the provider response body on a non-2xx response', async () => {
     const { fetchImpl } = stubFetch(422, '{"message":"invalid from"}');
     const mailer = new ResendMailer(OPTIONS, fetchImpl);
     await expect(
       mailer.send({ to: 'user@example.com', subject: 'Hi', text: 'Hello' }),
-    ).rejects.toThrow(/status 422.*invalid from/);
+    ).rejects.toThrow('Mailer request failed with status 422');
+  });
+
+  it('aborts a stalled provider request at the configured deadline', async () => {
+    let requestSignal: AbortSignal | null = null;
+    const stalledFetch = ((_url: unknown, init?: RequestInit) => {
+      requestSignal = init?.signal as AbortSignal;
+      return new Promise<Response>((_resolve, reject) => {
+        requestSignal?.addEventListener('abort', () => reject(requestSignal?.reason), { once: true });
+      });
+    }) as typeof globalThis.fetch;
+    const mailer = new ResendMailer(OPTIONS, stalledFetch, 5);
+
+    await expect(
+      mailer.send({ to: 'user@example.com', subject: 'Hi', text: 'Hello' }),
+    ).rejects.toThrow();
+    expect(requestSignal?.aborted).toBe(true);
+  });
+});
+
+describe('mailer configuration', () => {
+  it('allows the console mailer only outside production', () => {
+    expect(createMailer({ ...OPTIONS, provider: '' }, false)).toBeInstanceOf(ConsoleMailer);
+    expect(() => createMailer({ ...OPTIONS, provider: '' }, true)).toThrow(
+      'NUXT_MAILER_PROVIDER=resend is required in production',
+    );
+  });
+
+  it('requires complete Resend credentials and HTTPS outside loopback in production', () => {
+    expect(() =>
+      createMailer({ provider: 'resend', apiUrl: OPTIONS.apiUrl, apiKey: '', from: OPTIONS.from }, true),
+    ).toThrow('NUXT_MAILER_API_KEY');
+    expect(() =>
+      createMailer({ ...OPTIONS, provider: 'resend', apiUrl: 'http://api.example.com/emails' }, true),
+    ).toThrow('HTTPS');
+  });
+
+  it('allows a loopback Resend endpoint for the production integration server', () => {
+    expect(
+      createMailer({ ...OPTIONS, provider: 'resend', apiUrl: 'http://127.0.0.1:43123/emails' }, true),
+    ).toBeInstanceOf(ResendMailer);
+  });
+
+  it('logs no recipient or provider body when optional delivery fails', async () => {
+    const logger = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const failing = new ResendMailer(OPTIONS, stubFetch(422, 'private@example.com token=secret').fetchImpl);
+    const sent = await sendMailBestEffort(
+      failing,
+      { to: 'private@example.com', subject: 'Hi', text: 'token=secret' },
+      'test-mail',
+    );
+    expect(sent).toBe(false);
+    expect(logger).toHaveBeenCalledWith('[test-mail] Email delivery failed (provider status 422)');
+    expect(JSON.stringify(logger.mock.calls)).not.toContain('private@example.com');
+    expect(JSON.stringify(logger.mock.calls)).not.toContain('token=secret');
+    logger.mockRestore();
   });
 });
 

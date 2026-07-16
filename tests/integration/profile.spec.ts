@@ -12,7 +12,9 @@ import {
   getPetRow,
   getRecordRows,
   getUserRow,
+  loginAs,
   plantEmailConfirmToken,
+  sessionCookieFrom,
   uniqueName,
 } from './helpers';
 
@@ -60,7 +62,7 @@ describe('profile', () => {
 
       const dupName = await api('/api/me', {
         method: 'PUT',
-        body: { userName: other.userName, email: user.email, timezone: TZ, locale: 'en', digestOptIn: false, currentPassword: user.password },
+        body: { userName: other.userName.toUpperCase(), email: user.email, timezone: TZ, locale: 'en', digestOptIn: false, currentPassword: user.password },
         cookie: user.cookie,
       });
       expect(dupName.status).toBe(400);
@@ -98,6 +100,26 @@ describe('profile', () => {
       const confirmed = await api('/api/auth/confirm-email', { method: 'POST', body: { token: rawToken } });
       expect(confirmed.status).toBe(200);
       expect((await getUserRow(user.id))?.emailConfirmed).toBe(true);
+    });
+
+    it('keeps an email change successful when optional confirmation delivery fails', async () => {
+      const user = await createUserWithSession({ timezone: TZ });
+      const newEmail = `fail-${uniqueName('profile-mail')}@example.com`;
+      const res = await api('/api/me', {
+        method: 'PUT',
+        body: {
+          userName: user.userName,
+          email: newEmail,
+          timezone: TZ,
+          locale: 'en',
+          digestOptIn: false,
+          currentPassword: user.password,
+        },
+        cookie: user.cookie,
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.user.email).toBe(newEmail);
+      expect(res.body.user.emailConfirmed).toBe(false);
     });
 
     it('toggles the daily-reminder opt-in and reflects it on GET /api/me', async () => {
@@ -161,15 +183,28 @@ describe('profile', () => {
       expect(weak.status).toBe(422);
     });
 
-    it('swaps which password logs in', async () => {
+    it('keeps the caller signed in, revokes another device and resets successful verification', async () => {
       const user = await createUserWithSession({ timezone: TZ });
+      const otherDeviceCookie = await loginAs(user.userName, user.password);
       const newPassword = 'BrandNewPaws77!';
+
+      const wrongBeforeSuccess = await api('/api/me/password', {
+        method: 'PUT',
+        body: { currentPassword: 'WrongPaws123!', newPassword },
+        cookie: user.cookie,
+      });
+      expect(wrongBeforeSuccess.status).toBe(401);
+
       const res = await api('/api/me/password', {
         method: 'PUT',
         body: { currentPassword: user.password, newPassword },
         cookie: user.cookie,
       });
       expect(res.status).toBe(200);
+      const currentCookie = sessionCookieFrom(res);
+      expect((await api('/api/me', { cookie: currentCookie })).status).toBe(200);
+      expect((await api('/api/me', { cookie: user.cookie })).status).toBe(401);
+      expect((await api('/api/me', { cookie: otherDeviceCookie })).status).toBe(401);
 
       const oldLogin = await api('/api/auth/login', {
         method: 'POST',
@@ -182,6 +217,113 @@ describe('profile', () => {
         body: { userName: user.userName, password: newPassword },
       });
       expect(newLogin.status).toBe(200);
+
+      // The successful verification cleared the earlier failure. Five new
+      // failures are counted normally; the sixth is blocked.
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const wrong = await api('/api/me/password', {
+          method: 'PUT',
+          body: { currentPassword: 'WrongPaws123!', newPassword: 'AnotherPaws88!' },
+          cookie: currentCookie,
+        });
+        expect(wrong.status).toBe(401);
+      }
+      const blocked = await api('/api/me/password', {
+        method: 'PUT',
+        body: { currentPassword: 'WrongPaws123!', newPassword: 'AnotherPaws88!' },
+        cookie: currentCookie,
+      });
+      expect(blocked.status).toBe(429);
+      expect(blocked.headers.get('retry-after')).toBeTruthy();
+    });
+
+    it('allows only one concurrent password change from the same session', async () => {
+      const user = await createUserWithSession({ timezone: TZ });
+      const passwords = ['FirstPaws123!', 'SecondPaws456!'] as const;
+      const results = await Promise.all(
+        passwords.map((newPassword) =>
+          api('/api/me/password', {
+            method: 'PUT',
+            body: { currentPassword: user.password, newPassword },
+            cookie: user.cookie,
+          }),
+        ),
+      );
+      expect(results.map((result) => result.status).sort()).toEqual([200, 401]);
+
+      const winnerIndex = results.findIndex((result) => result.status === 200);
+      const loserIndex = winnerIndex === 0 ? 1 : 0;
+      expect(
+        (
+          await api('/api/auth/login', {
+            method: 'POST',
+            body: { userName: user.userName, password: passwords[winnerIndex]! },
+          })
+        ).status,
+      ).toBe(200);
+      expect(
+        (
+          await api('/api/auth/login', {
+            method: 'POST',
+            body: { userName: user.userName, password: passwords[loserIndex]! },
+          })
+        ).status,
+      ).toBe(401);
+    });
+
+    const passwordProtectedRoutes: Array<{
+      label: string;
+      path: string;
+      method: 'PUT' | 'DELETE';
+      body: (user: Awaited<ReturnType<typeof createUserWithSession>>) => Record<string, unknown>;
+    }> = [
+      {
+        label: 'profile update',
+        path: '/api/me',
+        method: 'PUT',
+        body: (user) => ({
+          userName: user.userName,
+          email: user.email,
+          timezone: TZ,
+          locale: 'en',
+          digestOptIn: false,
+          currentPassword: 'WrongPaws123!',
+        }),
+      },
+      {
+        label: 'password change',
+        path: '/api/me/password',
+        method: 'PUT',
+        body: () => ({
+          currentPassword: 'WrongPaws123!',
+          newPassword: 'AnotherPaws88!',
+        }),
+      },
+      {
+        label: 'account deletion',
+        path: '/api/me',
+        method: 'DELETE',
+        body: () => ({ currentPassword: 'WrongPaws123!' }),
+      },
+    ];
+
+    it.each(passwordProtectedRoutes)('rate limits $label password attempts', async (route) => {
+      const user = await createUserWithSession({ timezone: TZ });
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const wrong = await api(route.path, {
+          method: route.method,
+          body: route.body(user),
+          cookie: user.cookie,
+        });
+        expect(wrong.status).toBe(401);
+      }
+      const blocked = await api(route.path, {
+        method: route.method,
+        body: route.body(user),
+        cookie: user.cookie,
+      });
+      expect(blocked.status).toBe(429);
+      expect(blocked.headers.get('retry-after')).toBeTruthy();
     });
   });
 

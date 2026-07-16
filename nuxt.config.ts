@@ -86,7 +86,10 @@ export default defineNuxtConfig({
       ],
     },
     ssr: {
-      noExternal: ['zod'],
+      // The generic vue-i18n ESM build expects Vite to replace Vue's feature
+      // flags. Keep it in the SSR bundle so Nitro never copies unresolved
+      // __VUE_PROD_DEVTOOLS__ references into the Bun production output.
+      noExternal: ['vue-i18n', 'zod'],
     },
   },
   app: {
@@ -140,6 +143,9 @@ export default defineNuxtConfig({
     },
   },
   runtimeConfig: {
+    // Canonical origin for links sent by email. Required in production so a
+    // caller-controlled Host header can never receive a confirmation/reset token.
+    siteUrl: '',
     dbFile: '.data/needypet.sqlite',
     // Overridden via NUXT_MAILER_PROVIDER / NUXT_MAILER_API_KEY / NUXT_MAILER_FROM.
     // With provider unset (dev default) mail is printed to the server console.
@@ -170,6 +176,7 @@ export default defineNuxtConfig({
       hour: 18,
     },
     session: {
+      password: '', // Overridden via NUXT_SESSION_PASSWORD.
       maxAge: 60 * 60 * 10, // 10h, matches the old JWT lifetime
       cookie: {
         httpOnly: true,

@@ -27,9 +27,32 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   const dbFile = join(tempDir, 'test.sqlite');
   const uploadsDir = join(tempDir, 'uploads');
   let serverProcess: Bun.Subprocess<'ignore', 'inherit', 'inherit'> | null = null;
+  let mailServer: ReturnType<typeof Bun.serve> | null = null;
   mkdirSync(uploadsDir, { recursive: true });
 
   try {
+    mailServer = Bun.serve({
+      hostname: '127.0.0.1',
+      port: 0,
+      async fetch(request) {
+        if (
+          request.method !== 'POST' ||
+          new URL(request.url).pathname !== '/emails' ||
+          request.headers.get('authorization') !== 'Bearer itest-resend-key'
+        ) {
+          return new Response('Not found', { status: 404 });
+        }
+        const message = (await request.json()) as { to?: string };
+        if (message.to?.startsWith('fail-')) {
+          return Response.json({ message: 'Synthetic delivery failure' }, { status: 503 });
+        }
+        if (message.to?.startsWith('slow-')) {
+          await Bun.sleep(1_000);
+        }
+        return Response.json({ id: crypto.randomUUID() });
+      },
+    });
+
     const sqlite = new Database(dbFile);
     const db = drizzle(sqlite);
     migrate(db, { migrationsFolder: resolve(rootDir, 'server/db/migrations/sqlite') });
@@ -44,9 +67,14 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
         // The server reads plain process.env, so an inherited production URL
         // must be blanked or the suite would silently target a remote DB.
         NUXT_DB_URL: '',
+        NUXT_RATE_LIMIT_TRUST_PROXY: 'true',
+        NUXT_SITE_URL: 'https://needypet.test',
         NUXT_SESSION_PASSWORD: 'needypet-integration-test-session-password',
         NUXT_UPLOADS_DIR: uploadsDir,
-        NUXT_MAILER_PROVIDER: '',
+        NUXT_MAILER_PROVIDER: 'resend',
+        NUXT_MAILER_API_KEY: 'itest-resend-key',
+        NUXT_MAILER_FROM: 'NeedyPet <no-reply@needypet.test>',
+        NUXT_MAILER_API_URL: new URL('/emails', mailServer.url).toString(),
         NUXT_DIGEST_SECRET: 'itest-digest-secret',
       },
     });
@@ -57,7 +85,11 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     consola.restoreAll();
 
     const ctx = useTestContext();
-    const startedServer = await startBuiltServer(rootDir, ctx.options.env ?? {});
+    const outputDir = ctx.nuxt ? join(ctx.nuxt.options.buildDir, 'output') : undefined;
+    if (!outputDir) {
+      throw new Error('Integration build output directory is unavailable');
+    }
+    const startedServer = await startBuiltServer(rootDir, outputDir, ctx.options.env ?? {});
     serverProcess = startedServer.process;
     ctx.url = startedServer.url;
 
@@ -67,6 +99,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
 
     return async () => {
       await stopBuiltServer(serverProcess);
+      await stopMailServer(mailServer);
       // Runs the buildDir cleanup registered by loadFixture (.nuxt/test/<id>).
       for (const fn of ctx.teardown ?? []) {
         await fn();
@@ -75,19 +108,27 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     };
   } catch (error) {
     await stopBuiltServer(serverProcess);
+    await stopMailServer(mailServer);
     rmSync(tempDir, { recursive: true, force: true });
     throw error;
   }
 }
 
+async function stopMailServer(server: ReturnType<typeof Bun.serve> | null): Promise<void> {
+  if (server) {
+    await server.stop(true);
+  }
+}
+
 async function startBuiltServer(
   rootDir: string,
+  outputDir: string,
   env: Record<string, unknown>,
 ): Promise<{ process: Bun.Subprocess<'ignore', 'inherit', 'inherit'>; url: string }> {
   const host = '127.0.0.1';
   const port = await getFreePort(host);
   const url = `http://${host}:${port}/`;
-  const subprocess = Bun.spawn(['bun', '.output/server/index.mjs'], {
+  const subprocess = Bun.spawn(['bun', join(outputDir, 'server/index.mjs')], {
     cwd: rootDir,
     stdout: 'inherit',
     stderr: 'inherit',
@@ -95,8 +136,8 @@ async function startBuiltServer(
       ...process.env,
       PORT: String(port),
       HOST: host,
-      NODE_ENV: 'test',
       ...stringifyEnv(env),
+      NODE_ENV: 'production',
     },
   });
 

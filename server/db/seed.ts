@@ -3,6 +3,7 @@ import { hashUserPassword } from '../utils/password';
 import { addDaysDateOnly, todayInTimeZone } from '../../shared/utils/date';
 import { instantToIso } from '../../shared/utils/datetime';
 import { Temporal } from '../../shared/utils/temporal';
+import { normalizeUserName } from '../../shared/utils/userName';
 import { useDb } from './index';
 import { careRecords, needs, petCaretakers, pets, users } from './schema';
 
@@ -44,6 +45,7 @@ await db.insert(users)
     {
       id: ownerId,
       userName: 'demo',
+      userNameKey: normalizeUserName('demo'),
       email: 'demo@example.com',
       passwordHash: await hashUserPassword('DemoPaws123!'),
       emailConfirmed: true,
@@ -54,6 +56,7 @@ await db.insert(users)
     {
       id: helperId,
       userName: 'helper',
+      userNameKey: normalizeUserName('helper'),
       email: 'helper@example.com',
       passwordHash: await hashUserPassword('HelperPaws123!'),
       emailConfirmed: true,

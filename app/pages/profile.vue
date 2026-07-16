@@ -12,7 +12,7 @@ import type { Locale, PublicUser } from '#shared/types/domain';
 
 definePageMeta({ middleware: 'auth' });
 
-const { clear: clearSession, fetch: refreshSession } = useUserSession();
+const { clear: clearUserSession, fetch: refreshSession } = useUserSession();
 const { t, locale: activeLocale } = useI18n();
 
 const { data: me, status, refresh } = await useFetch<PublicUser>('/api/me');
@@ -27,7 +27,7 @@ async function logout() {
   try {
     await $fetch('/api/auth/logout', { method: 'POST' });
   } finally {
-    await clearSession();
+    await clearUserSession();
     await navigateTo('/');
   }
 }
@@ -239,7 +239,7 @@ async function confirmDelete(): Promise<void> {
   deleteBusy.value = true;
   try {
     await $fetch('/api/me', { method: 'DELETE', body: parsed.data });
-    await clearSession();
+    await clearUserSession();
     await navigateTo('/');
   } catch (error) {
     if (error instanceof FetchError && error.statusCode === 401) {

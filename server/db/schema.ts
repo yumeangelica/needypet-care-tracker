@@ -4,4 +4,4 @@
  * apply everywhere (no dialect drift). All application code imports tables from
  * './schema'.
  */
-export { users, pets, petCaretakers, needs, careRecords } from './schema.sqlite';
+export { users, rateLimits, pets, petCaretakers, needs, careRecords } from './schema.sqlite';

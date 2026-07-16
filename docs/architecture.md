@@ -23,7 +23,7 @@ Nitro server routes (server/api/**)          ← the only API surface
    │  Drizzle ORM
    ▼
 SQLite: bun:sqlite (dev) / libSQL/Turso (prod, same dialect)
-   plus: Cloudflare R2 or local disk (pet photos), Resend or console (mail)
+   plus: Cloudflare R2 or local disk (pet photos), Resend prod / console dev (mail)
 ```
 
 ## Module map
@@ -51,8 +51,9 @@ Every authenticated API handler follows the same pipeline:
 
 1. **Session** — `requireAppUser(event)` (`server/utils/session.ts`) requires a
    valid sealed cookie *and* re-reads the full user row per request. The
-   session payload stores only `{ id, userName, locale }`, so deleted or
-   edited accounts behave correctly immediately.
+   session payload stores only `{ id, userName, sessionVersion, locale }`.
+   Deleted accounts and cookies invalidated by a password reset/change fail
+   immediately ([ADR-0013](decisions/0013-revocable-sealed-cookie-sessions.md)).
 2. **Access guard** — `requirePetOwner(petId, userId)` or
    `requirePetAccess(petId, userId)` (`server/utils/petAccess.ts`). Missing
    pet → 404; existing pet without permission → 403.
@@ -179,10 +180,10 @@ checkable ones are enforced by `tests/unit/guardrails.spec.ts`.
 | One SQLite dialect, one schema, one migration set (bun:sqlite ↔ libSQL) | [ADR-0002](decisions/0002-sqlite-only-single-dialect.md) | review |
 | No `node:crypto` — Web Crypto / Bun natives only | [ADR-0003](decisions/0003-bun-native-web-standard.md) | guardrails |
 | `temporal-polyfill` imported only via `shared/utils/temporal.ts`; no `new Date` in app/server/shared | [ADR-0004](decisions/0004-temporal-behind-seam.md) | guardrails |
-| Cookie sessions via nuxt-auth-utils; no hand-rolled JWTs | [ADR-0005](decisions/0005-cookie-sessions-no-jwt.md) | review |
+| Versioned cookie sessions via nuxt-auth-utils; no hand-rolled JWTs | [ADR-0013](decisions/0013-revocable-sealed-cookie-sessions.md) | review |
 | No Pinia / global stores; server is the source of truth | [ADR-0006](decisions/0006-store-free-client-state.md) | guardrails |
 | vue-i18n as a plain plugin; en/fi key parity | [ADR-0007](decisions/0007-plain-vue-i18n.md) | `i18n.spec.ts` |
 | Date-only values are owner-local `YYYY-MM-DD` strings; record `date` is UTC ISO | [ADR-0008](decisions/0008-owner-timezone-care-day.md) | unit + integration tests |
 | Rollover is lazy, idempotent, never backfills | [ADR-0009](decisions/0009-lazy-rollover.md) | `rollover.spec.ts` (unit + integration) |
-| Exactly one measurement per need/record, matching types | [ADR-0010](decisions/0010-single-measurement-three-layers.md) | zod + DB CHECK + tests |
+| Exactly one bounded measurement per need/record, matching types | [ADR-0014](decisions/0014-bounded-single-measurements.md) | zod + DB CHECK + tests |
 | API responses never cached by the service worker | Workbox denylist in `nuxt.config.ts` | config |

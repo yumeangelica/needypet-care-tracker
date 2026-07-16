@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import { getMeasurementType } from '../../../shared/utils/measurement';
+import { normalizeUserName } from '../../../shared/utils/userName';
 import type { careRecords, needs, petCaretakers, pets, users } from '../schema';
 import type {
   LegacyCareRecord,
@@ -98,16 +99,18 @@ function checkDuplicates(
   file: string,
   field: string,
   errors: string[],
+  normalize: (value: string) => string = (value) => value,
 ): void {
   const seen = new Set<string>();
   for (const value of values) {
     if (!value) {
       continue;
     }
-    if (seen.has(value)) {
+    const key = normalize(value);
+    if (seen.has(key)) {
       errors.push(`${file}: duplicate ${field} "${value}"`);
     }
-    seen.add(value);
+    seen.add(key);
   }
 }
 
@@ -157,13 +160,19 @@ export function validateBundle(bundle: RawBundle, context: ImportContext): Valid
 
   // --- users ----------------------------------------------------------------
   checkDuplicates(legacyUsers.map((user) => user.legacyId), 'users.json', 'legacyId', errors);
-  checkDuplicates(legacyUsers.map((user) => user.userName), 'users.json', 'userName', errors);
+  checkDuplicates(
+    legacyUsers.map((user) => user.userName),
+    'users.json',
+    'userName',
+    errors,
+    normalizeUserName,
+  );
   checkDuplicates(legacyUsers.map((user) => user.email), 'users.json', 'email', errors);
   for (const user of legacyUsers) {
     if (context.existingLegacyIds.users.has(user.legacyId)) {
       errors.push(`users.json: legacyId "${user.legacyId}" was already imported`);
     }
-    if (context.existingUserNames.has(user.userName)) {
+    if (context.existingUserNames.has(normalizeUserName(user.userName))) {
       errors.push(`users.json: userName "${user.userName}" already exists in the database`);
     }
     if (context.existingEmails.has(user.email)) {
@@ -256,6 +265,7 @@ export function validateBundle(bundle: RawBundle, context: ImportContext): Valid
         id: userIdByLegacy.get(user.legacyId)!,
         legacyId: user.legacyId,
         userName: user.userName,
+        userNameKey: normalizeUserName(user.userName),
         email: user.email,
         passwordHash: user.passwordHash,
         emailConfirmed: user.emailConfirmed,

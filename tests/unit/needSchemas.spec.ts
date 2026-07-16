@@ -27,6 +27,16 @@ describe('needSchema', () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it('accepts the quantity maximum and rejects larger values', () => {
+    const base = { dateFor: '2026-07-05', category: 'Fresh water' };
+    expect(
+      needSchema.safeParse({ ...base, quantity: { value: 100_000, unit: 'ml' } }).success,
+    ).toBe(true);
+    expect(
+      needSchema.safeParse({ ...base, quantity: { value: 100_001, unit: 'ml' } }).success,
+    ).toBe(false);
+  });
 });
 
 describe('needUpdateSchema', () => {

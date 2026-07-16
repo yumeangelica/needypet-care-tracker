@@ -44,7 +44,7 @@ describe('register', () => {
 
     const dupName = await api('/api/auth/register', {
       method: 'POST',
-      body: { ...registerBody(uniqueName('dup')), userName: existing.userName },
+      body: { ...registerBody(uniqueName('dup')), userName: existing.userName.toUpperCase() },
     });
     expect(dupName.status).toBe(400);
     expect(errorMessage(dupName.body)).toBe('Username already exists');
@@ -55,6 +55,44 @@ describe('register', () => {
     });
     expect(dupEmail.status).toBe(400);
     expect(errorMessage(dupEmail.body)).toBe('Email already exists');
+  });
+
+  it('supports canonical case-insensitive Unicode usernames', async () => {
+    const suffix = uniqueName('unicode');
+    const userName = `Mäyrä-${suffix}`;
+    const email = `${uniqueName('unicode-mail')}@example.com`;
+    const created = await api('/api/auth/register', {
+      method: 'POST',
+      body: { ...registerBody(userName), email },
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.user.userName).toBe(userName);
+
+    const login = await api('/api/auth/login', {
+      method: 'POST',
+      body: { userName: userName.toUpperCase(), password: TEST_PASSWORD },
+    });
+    expect(login.status).toBe(200);
+
+    const canonicalDuplicate = await api('/api/auth/register', {
+      method: 'POST',
+      body: {
+        ...registerBody(`Mäyrä-${suffix}`),
+        email: `${uniqueName('unicode-duplicate')}@example.com`,
+      },
+    });
+    expect(canonicalDuplicate.status).toBe(400);
+    expect(errorMessage(canonicalDuplicate.body)).toBe('Username already exists');
+  });
+
+  it('keeps registration successful when optional confirmation delivery fails', async () => {
+    const userName = uniqueName('mail-failure');
+    const res = await api('/api/auth/register', {
+      method: 'POST',
+      body: { ...registerBody(userName), email: `fail-${userName}@example.com` },
+    });
+    expect(res.status).toBe(201);
+    expect((await api('/api/me', { cookie: sessionCookieFrom(res) })).status).toBe(200);
   });
 
   it('422s a weak password and an invalid timezone with field details', async () => {
@@ -90,7 +128,7 @@ describe('login and logout', () => {
     const user = await createUser();
     const res = await api('/api/auth/login', {
       method: 'POST',
-      body: { userName: user.userName, password: user.password },
+      body: { userName: user.userName.toUpperCase(), password: user.password },
     });
     expect(res.status).toBe(200);
     expect(res.body.user.id).toBe(user.id);
@@ -149,6 +187,20 @@ describe('login and logout', () => {
 });
 
 describe('confirm email', () => {
+  it('returns 503 when an explicit resend cannot be delivered', async () => {
+    const user = await createUserWithSession({
+      email: `fail-${uniqueName('resend')}@example.com`,
+      emailConfirmed: false,
+    });
+    const res = await api('/api/auth/resend-confirmation', {
+      method: 'POST',
+      cookie: user.cookie,
+    });
+    expect(res.status).toBe(503);
+    expect(errorMessage(res.body)).toBe('Confirmation email could not be sent. Please try again.');
+    expect((await getUserRow(user.id))?.emailConfirmToken).toBeTruthy();
+  });
+
   it('confirms with a valid token exactly once', async () => {
     const user = await createUser({ emailConfirmed: false });
     const rawToken = `confirm-${crypto.randomUUID()}`;
@@ -167,7 +219,7 @@ describe('confirm email', () => {
   });
 
   it('rejects an expired token', async () => {
-    const user = await createUser({ emailConfirmed: false });
+    const user = await createUserWithSession({ emailConfirmed: false });
     const rawToken = `expired-${crypto.randomUUID()}`;
     await plantEmailConfirmToken(
       user.id,
@@ -195,9 +247,32 @@ describe('password reset', () => {
     expect(known.status).toBe(200);
     expect(known.body.message).toBe(unknown.body.message);
 
-    const row = await getUserRow(user.id);
+    const row = await waitForPasswordResetToken(user.id);
     expect(row?.passwordResetToken).toBeTruthy();
     expect(row?.passwordResetExpiresAt).toBeTruthy();
+  });
+
+  it('keeps forgot-password generic when reset delivery fails', async () => {
+    const user = await createUser({ email: `fail-${uniqueName('forgot')}@example.com` });
+    const res = await api('/api/auth/forgot-password', {
+      method: 'POST',
+      body: { email: user.email },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('If that email is with us, a reset link is on its way. 🐾');
+  });
+
+  it('does not expose provider latency for a known forgot-password address', async () => {
+    const user = await createUser({ email: `slow-${uniqueName('forgot')}@example.com` });
+    const startedAt = performance.now();
+    const res = await api('/api/auth/forgot-password', {
+      method: 'POST',
+      body: { email: user.email },
+    });
+
+    expect(res.status).toBe(200);
+    expect(performance.now() - startedAt).toBeLessThan(700);
+    expect((await waitForPasswordResetToken(user.id))?.passwordResetToken).toBeTruthy();
   });
 
   it('resets the password with a valid token exactly once and confirms the email', async () => {
@@ -211,6 +286,9 @@ describe('password reset', () => {
       body: { token: rawToken, newPassword },
     });
     expect(ok.status).toBe(200);
+
+    const staleSession = await api('/api/me', { cookie: user.cookie });
+    expect(staleSession.status).toBe(401);
 
     const oldLogin = await api('/api/auth/login', {
       method: 'POST',
@@ -236,6 +314,42 @@ describe('password reset', () => {
     expect(reused.status).toBe(400);
   });
 
+  it('allows only one concurrent redemption of a reset token', async () => {
+    const user = await createUser();
+    const rawToken = `race-${crypto.randomUUID()}`;
+    await plantPasswordResetToken(user.id, rawToken);
+    const passwords = ['WinnerPaws123!', 'OtherPaws456!'] as const;
+
+    const results = await Promise.all(
+      passwords.map((newPassword) =>
+        api('/api/auth/reset-password', {
+          method: 'POST',
+          body: { token: rawToken, newPassword },
+        }),
+      ),
+    );
+    expect(results.map((result) => result.status).sort()).toEqual([200, 400]);
+
+    const winnerIndex = results.findIndex((result) => result.status === 200);
+    const loserIndex = winnerIndex === 0 ? 1 : 0;
+    expect(
+      (
+        await api('/api/auth/login', {
+          method: 'POST',
+          body: { userName: user.userName, password: passwords[winnerIndex]! },
+        })
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await api('/api/auth/login', {
+          method: 'POST',
+          body: { userName: user.userName, password: passwords[loserIndex]! },
+        })
+      ).status,
+    ).toBe(401);
+  });
+
   it('422s a weak new password', async () => {
     const user = await createUser();
     const rawToken = `weakreset-${crypto.randomUUID()}`;
@@ -249,3 +363,15 @@ describe('password reset', () => {
     expect(errorDetails(res.body)?.newPassword).toBeTruthy();
   });
 });
+
+async function waitForPasswordResetToken(userId: string) {
+  const deadline = Temporal.Now.instant().epochMilliseconds + 2_000;
+  while (Temporal.Now.instant().epochMilliseconds < deadline) {
+    const row = await getUserRow(userId);
+    if (row?.passwordResetToken) {
+      return row;
+    }
+    await Bun.sleep(10);
+  }
+  return getUserRow(userId);
+}
