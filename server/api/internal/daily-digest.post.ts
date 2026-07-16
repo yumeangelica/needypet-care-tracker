@@ -1,10 +1,10 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lt, or } from 'drizzle-orm';
 import { hourInTimeZone, todayInTimeZone } from '#shared/utils/date';
 import { instantToIso } from '#shared/utils/datetime';
 import type { DigestPetSection } from '#shared/utils/digest';
 import { shouldSendDigestNow } from '#shared/utils/digest';
 import { Temporal } from '#shared/utils/temporal';
-import { useDb } from '../../db';
+import { firstRow, useDb } from '../../db';
 import { needs, petCaretakers, pets, users } from '../../db/schema';
 import { dailyDigestMessage, useMailer } from '../../utils/mailer';
 import type { PetRow } from '../../utils/petAccess';
@@ -82,14 +82,42 @@ export default defineEventHandler(async (event) => {
         continue;
       }
 
-      await mailer.send(
-        dailyDigestMessage(user.email, sections, homeLink, user.locale as 'en' | 'fi'),
+      // Claim the day BEFORE sending, atomically: the conditional update only
+      // stamps if this user has not already been stamped for today. Two
+      // overlapping cron runs then can't both send — the loser gets zero rows
+      // back and skips. RETURNING works on both the bun:sqlite and libSQL
+      // drivers (see confirm-email/reset-password for the same idiom).
+      const claimed = firstRow(
+        await db
+          .update(users)
+          .set({ lastDigestDate: localDate, updatedAt: instantToIso(Temporal.Now.instant()) })
+          .where(
+            and(
+              eq(users.id, user.id),
+              or(isNull(users.lastDigestDate), lt(users.lastDigestDate, localDate)),
+            ),
+          )
+          .returning({ id: users.id }),
       );
-      // Stamp only after a successful send so a mailer outage retries next run.
-      await db
-        .update(users)
-        .set({ lastDigestDate: localDate, updatedAt: instantToIso(Temporal.Now.instant()) })
-        .where(eq(users.id, user.id));
+      if (!claimed) {
+        // A concurrent run already claimed today for this user.
+        skipped += 1;
+        continue;
+      }
+
+      try {
+        await mailer.send(
+          dailyDigestMessage(user.email, sections, homeLink, user.locale as 'en' | 'fi'),
+        );
+      } catch (sendError) {
+        // Release the claim so a later run retries: restore the prior stamp
+        // (the value read before this run) rather than leaving today stamped.
+        await db
+          .update(users)
+          .set({ lastDigestDate: user.lastDigestDate, updatedAt: instantToIso(Temporal.Now.instant()) })
+          .where(eq(users.id, user.id));
+        throw sendError;
+      }
       sent += 1;
     } catch {
       console.error(`[daily-digest] Delivery failed for user ${user.id}`);
