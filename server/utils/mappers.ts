@@ -3,21 +3,31 @@ import type {
   DurationUnit,
   MeasurementShape,
   Need,
+  NeedSchedule,
   Pet,
   QuantityUnit,
+  RecurrenceRule,
 } from '#shared/types/domain';
 import { normalizePetImage } from '#shared/utils/petImages';
-import type { careRecords, needs } from '../db/schema';
+import { formatWeekdaysCsv, parseWeekdaysCsv } from '#shared/utils/recurrence';
+import type { careRecords, needSchedules, needs } from '../db/schema';
 import type { PetRow } from './petAccess';
 
 export type NeedRow = typeof needs.$inferSelect;
 export type CareRecordRow = typeof careRecords.$inferSelect;
+export type ScheduleRow = typeof needSchedules.$inferSelect;
 
-/** Maps a needs row's flat measurement columns back into the domain shape. */
-export function toDomainNeed(row: NeedRow): Need {
+/**
+ * Maps a needs row's flat measurement columns back into the domain shape.
+ * `recurrence` is a display property of the SOURCE RULE, so it rides in from
+ * the caller that has the schedule at hand (null = one-off / history).
+ */
+export function toDomainNeed(row: NeedRow, recurrence: RecurrenceRule | null = null): Need {
   const need: Need = {
     id: row.id,
     petId: row.petId,
+    scheduleId: row.scheduleId,
+    recurrence,
     dateFor: row.dateFor,
     category: row.category,
     description: row.description,
@@ -34,6 +44,62 @@ export function toDomainNeed(row: NeedRow): Need {
     need.quantity = { value: row.quantityValue, unit: row.quantityUnit as QuantityUnit };
   }
   return need;
+}
+
+/** Reads a schedule row's recurrence columns into the domain rule union. */
+export function toRecurrenceRule(
+  row: Pick<ScheduleRow, 'recurrenceType' | 'intervalDays' | 'weekdays'>,
+): RecurrenceRule {
+  if (row.recurrenceType === 'interval' && row.intervalDays !== null) {
+    return { type: 'interval', intervalDays: row.intervalDays };
+  }
+  if (row.recurrenceType === 'weekly' && row.weekdays !== null) {
+    const weekdays = parseWeekdaysCsv(row.weekdays);
+    if (weekdays) {
+      return { type: 'weekly', weekdays };
+    }
+  }
+  if (row.recurrenceType !== 'daily') {
+    // Zod + the CHECK constraints should make this unreachable; a loud error
+    // beats silently reinterpreting a broken weekly/interval rule as daily.
+    throw new Error(`Invalid recurrence columns on need_schedules row (${row.recurrenceType})`);
+  }
+  return { type: 'daily' };
+}
+
+/** Inverse of toRecurrenceRule, for INSERT/UPDATE values. */
+export function toRecurrenceColumns(rule: RecurrenceRule): {
+  recurrenceType: string;
+  intervalDays: number | null;
+  weekdays: string | null;
+} {
+  return {
+    recurrenceType: rule.type,
+    intervalDays: rule.type === 'interval' ? rule.intervalDays : null,
+    weekdays: rule.type === 'weekly' ? formatWeekdaysCsv(rule.weekdays) : null,
+  };
+}
+
+/** Maps a need_schedules row into the domain shape. */
+export function toDomainSchedule(row: ScheduleRow): NeedSchedule {
+  const schedule: NeedSchedule = {
+    id: row.id,
+    petId: row.petId,
+    category: row.category,
+    description: row.description,
+    recurrence: toRecurrenceRule(row),
+    anchorDate: row.anchorDate,
+    isActive: row.isActive,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+  if (row.durationValue !== null) {
+    schedule.duration = { value: row.durationValue, unit: (row.durationUnit ?? 'minutes') as DurationUnit };
+  }
+  if (row.quantityValue !== null && row.quantityUnit !== null) {
+    schedule.quantity = { value: row.quantityValue, unit: row.quantityUnit as QuantityUnit };
+  }
+  return schedule;
 }
 
 /** Inverse of toDomainNeed's measurement mapping, for INSERT/UPDATE values. */

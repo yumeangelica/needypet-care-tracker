@@ -97,6 +97,58 @@ export const petCaretakers = sqliteTable(
   ],
 );
 
+/**
+ * Recurrence rules (ADR-0015): the template a need instance is created from.
+ * `needs` stays the per-day instance table; rollover materializes one
+ * instance per due, active schedule. Measurement columns and CHECKs mirror
+ * `needs` (ADR-0014). A paused schedule (is_active = false) produces no
+ * instances but survives until deleted.
+ */
+export const needSchedules = sqliteTable(
+  'need_schedules',
+  {
+    id: text('id').primaryKey(),
+    legacyId: text('legacy_id').unique(),
+    petId: text('pet_id')
+      .notNull()
+      .references(() => pets.id, { onDelete: 'cascade' }),
+    category: text('category').notNull(),
+    description: text('description').notNull().default(''),
+    durationValue: integer('duration_value'),
+    durationUnit: text('duration_unit'),
+    quantityValue: real('quantity_value'),
+    quantityUnit: text('quantity_unit'),
+    // 'daily' | 'interval' (every intervalDays) | 'weekly' (weekdays CSV).
+    recurrenceType: text('recurrence_type').notNull().default('daily'),
+    intervalDays: integer('interval_days'), // interval only, 2..365
+    weekdays: text('weekdays'), // weekly only, CSV of ISO weekday numbers "1,4" (1 = Mon)
+    anchorDate: text('anchor_date').notNull(), // YYYY-MM-DD owner-local; fixed interval rhythm zero
+    isActive: integer('is_active', { mode: 'boolean' }).notNull().default(true),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [
+    index('need_schedules_pet_idx').on(table.petId),
+    index('need_schedules_pet_active_idx').on(table.petId, table.isActive),
+    check(
+      'need_schedules_exactly_one_measurement',
+      sql`(${table.durationValue} IS NOT NULL) + (${table.quantityValue} IS NOT NULL) = 1`,
+    ),
+    check(
+      'need_schedules_duration_unit',
+      sql`${table.durationUnit} IS NULL OR ${table.durationUnit} = 'minutes'`,
+    ),
+    check(
+      'need_schedules_quantity_unit',
+      sql`${table.quantityUnit} IS NULL OR ${table.quantityUnit} IN ('ml', 'g')`,
+    ),
+    check(
+      'need_schedules_recurrence_type',
+      sql`${table.recurrenceType} IN ('daily', 'interval', 'weekly')`,
+    ),
+  ],
+);
+
 export const needs = sqliteTable(
   'needs',
   {
@@ -105,6 +157,10 @@ export const needs = sqliteTable(
     petId: text('pet_id')
       .notNull()
       .references(() => pets.id, { onDelete: 'cascade' }),
+    // The schedule this instance was materialized from; NULL for one-off
+    // needs and for frozen history whose rule was deleted (SET NULL keeps
+    // archived days untouched — ADR-0015).
+    scheduleId: text('schedule_id').references(() => needSchedules.id, { onDelete: 'set null' }),
     dateFor: text('date_for').notNull(), // YYYY-MM-DD, owner-local care day
     category: text('category').notNull(),
     description: text('description').notNull().default(''),
@@ -121,6 +177,8 @@ export const needs = sqliteTable(
   (table) => [
     index('needs_pet_date_idx').on(table.petId, table.dateFor),
     index('needs_pet_archived_idx').on(table.petId, table.archived),
+    // Rollover dedup: "does today already have a live instance of this rule?"
+    index('needs_schedule_date_idx').on(table.scheduleId, table.dateFor),
     check(
       'needs_exactly_one_measurement',
       sql`(${table.durationValue} IS NOT NULL) + (${table.quantityValue} IS NOT NULL) = 1`,

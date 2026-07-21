@@ -10,8 +10,23 @@ Tick a box (`- [x]`) when done.
 
 - [ ] **Push notifications** for the daily digest (currently email only) — the PWA
   service worker is already in place, so Web Push is the natural next layer.
-- [ ] **Recurring / scheduled needs** beyond the daily rollover (e.g. "every Mon/Thu",
-  "every 3 days") instead of one fixed daily set.
+- [x] **Recurring / scheduled needs** beyond the daily rollover — shipped as
+  first-class `need_schedules` rules (daily / every N days / weekdays / once)
+  with a rules list on the pet page; pausing now suspends instead of killing
+  the template (ADR-0015, `specs/feature-specs/recurring-needs.md`).
+- [ ] **AI care assistant** — chat on the pet page that answers care questions
+  with the pet's own context (species, age, today's tasks, 7-day record
+  summary); OpenAI-compatible provider behind `NUXT_AI_*` env, off by
+  default. Design decided (ADR-0016, Proposed) and spec written
+  (`specs/feature-specs/ai-care-assistant.md`) — **spec-first, ready to build**.
+- [ ] **AI weekly summary** — natural-language week recap with anomalies
+  ("feeding skipped twice this week"); second layer on the ADR-0016 seam.
+- [ ] **AI need suggestions on pet creation** — species/age-appropriate task
+  presets offered when a pet is created; third layer on the ADR-0016 seam.
+- [ ] **Persisted assistant conversations** — v1 chat is stateless by design;
+  add a table + history UI only if real usage asks for it.
+- [ ] **"Skip today" for a recurring task** — delete today's instance without
+  removing the rule (today the card's delete removes the whole rule).
 - [ ] **Care task templates** — quick-add common tasks (walk, feed, meds) instead of
   typing each one.
 - [ ] **Multiple photos per pet** / a small gallery (today a pet has one image).
@@ -24,8 +39,19 @@ Tick a box (`- [x]`) when done.
 
 ## Quality / hardening
 
+- [ ] **Access-controlled pet photos** — `/uploads/**` (and the public R2
+  bucket) serve photos to anyone holding the unguessable UUID URL; move to
+  authenticated serving or short-lived signed URLs if pet photos should be
+  private rather than obscure (documented trust model today).
+- [ ] **Orphaned upload sweep** — a crash between `storage.put` and the DB
+  update leaves an unreferenced file; add a small cleanup pass (list keys,
+  delete those no pet references).
+- [ ] **Zod schemas for query params** — `records.get`/`stats.get` validate
+  `limit`/`offset`/`weekStart` by hand; align them with the body-validation
+  pattern for consistency.
 - [ ] **Accessibility audit** of the new i18n locale picker and Finnish copy
-  (keyboard + screen reader), plus a general WCAG 2.2 AA pass.
+  (keyboard + screen reader), plus a general WCAG 2.2 AA pass — include the
+  new recurrence picker and rules list.
 - [ ] **Component/E2E tests** for the Vue components (currently unit tests cover
   shared logic and integration tests cover the API; the UI is verified manually
   / ad-hoc Playwright).

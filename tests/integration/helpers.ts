@@ -9,7 +9,7 @@ import { instantToIso } from '../../shared/utils/datetime';
 import { Temporal } from '../../shared/utils/temporal';
 import { normalizeUserName } from '../../shared/utils/userName';
 
-const { careRecords, needs, petCaretakers, pets, users } = schema;
+const { careRecords, needSchedules, needs, petCaretakers, pets, users } = schema;
 
 /* ------------------------------------------------------------------ HTTP */
 
@@ -207,6 +207,12 @@ export interface Measurement {
   unit: string;
 }
 
+function measurementColumns(overrides: { duration?: Measurement; quantity?: Measurement }) {
+  return overrides.duration
+    ? { durationValue: overrides.duration.value, durationUnit: overrides.duration.unit }
+    : { quantityValue: (overrides.quantity ?? { value: 200, unit: 'ml' }).value, quantityUnit: (overrides.quantity ?? { value: 200, unit: 'ml' }).unit };
+}
+
 export async function createNeed(
   petId: string,
   overrides: {
@@ -218,20 +224,20 @@ export async function createNeed(
     completed?: boolean;
     archived?: boolean;
     isActive?: boolean;
+    /** Link the instance to a rule; omitted = schedule-less one-off. */
+    scheduleId?: string | null;
   },
 ): Promise<{ id: string }> {
   const now = instantToIso(Temporal.Now.instant());
   const id = crypto.randomUUID();
-  const measurement = overrides.duration
-    ? { durationValue: overrides.duration.value, durationUnit: overrides.duration.unit }
-    : { quantityValue: (overrides.quantity ?? { value: 200, unit: 'ml' }).value, quantityUnit: (overrides.quantity ?? { value: 200, unit: 'ml' }).unit };
   await testDb().insert(needs).values({
     id,
     petId,
+    scheduleId: overrides.scheduleId ?? null,
     dateFor: overrides.dateFor,
     category: overrides.category ?? 'Fresh water',
     description: overrides.description ?? '',
-    ...measurement,
+    ...measurementColumns(overrides),
     completed: overrides.completed ?? false,
     archived: overrides.archived ?? false,
     isActive: overrides.isActive ?? true,
@@ -239,6 +245,60 @@ export async function createNeed(
     updatedAt: now,
   });
   return { id };
+}
+
+/** Plants a recurrence rule (ADR-0015). Defaults to an active daily rule. */
+export async function createSchedule(
+  petId: string,
+  overrides: {
+    anchorDate: string;
+    category?: string;
+    description?: string;
+    duration?: Measurement;
+    quantity?: Measurement;
+    recurrenceType?: 'daily' | 'interval' | 'weekly';
+    intervalDays?: number;
+    weekdays?: string; // CSV of ISO weekday numbers, e.g. '1,4'
+    isActive?: boolean;
+  },
+): Promise<{ id: string }> {
+  const now = instantToIso(Temporal.Now.instant());
+  const id = crypto.randomUUID();
+  await testDb().insert(needSchedules).values({
+    id,
+    petId,
+    category: overrides.category ?? 'Fresh water',
+    description: overrides.description ?? '',
+    ...measurementColumns(overrides),
+    recurrenceType: overrides.recurrenceType ?? 'daily',
+    intervalDays: overrides.intervalDays ?? null,
+    weekdays: overrides.weekdays ?? null,
+    anchorDate: overrides.anchorDate,
+    isActive: overrides.isActive ?? true,
+    createdAt: now,
+    updatedAt: now,
+  });
+  return { id };
+}
+
+/**
+ * The pre-0015 "daily need" fixture: a daily rule plus its instance on
+ * `dateFor` — what the data migration produces for every legacy live need.
+ */
+export async function createDailyNeed(
+  petId: string,
+  overrides: Parameters<typeof createNeed>[1] & { scheduleActive?: boolean },
+): Promise<{ id: string; scheduleId: string }> {
+  const schedule = await createSchedule(petId, {
+    anchorDate: overrides.dateFor,
+    category: overrides.category,
+    description: overrides.description,
+    duration: overrides.duration,
+    quantity: overrides.quantity,
+    isActive: overrides.scheduleActive ?? overrides.isActive ?? true,
+  });
+  const need = await createNeed(petId, { ...overrides, scheduleId: schedule.id });
+  return { id: need.id, scheduleId: schedule.id };
 }
 
 export async function createRecord(opts: {
@@ -286,6 +346,10 @@ export async function getNeedRow(id: string) {
 
 export async function getNeedRows(petId: string) {
   return testDb().select().from(needs).where(eq(needs.petId, petId));
+}
+
+export async function getScheduleRows(petId: string) {
+  return testDb().select().from(needSchedules).where(eq(needSchedules.petId, petId));
 }
 
 export async function getRecordRows(needId: string) {

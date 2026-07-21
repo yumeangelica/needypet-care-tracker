@@ -1,15 +1,18 @@
 import { eq } from 'drizzle-orm';
 import type { Need } from '#shared/types/domain';
-import { instantToIso } from '#shared/utils/datetime';
-import { Temporal } from '#shared/utils/temporal';
 import { firstRow, useDb } from '../../../../../db';
 import { needs } from '../../../../../db/schema';
 import { toDomainNeed } from '../../../../../utils/mappers';
+import { toggleNeedWithSchedule } from '../../../../../utils/needSchedules';
 import { requirePetOwner } from '../../../../../utils/petAccess';
 import { requireAppUser } from '../../../../../utils/session';
 
-/** Pause/resume: a paused (isActive: false) need stays on its day but does
- * not roll forward to the next day. */
+/**
+ * Pause/resume. A scheduled instance pauses/resumes its RULE (paused rules
+ * produce no new instances until resumed — ADR-0015) and mirrors the state
+ * onto this instance; a one-off keeps the legacy instance-only flip. A
+ * paused instance stays on its day and still accepts records.
+ */
 export default defineEventHandler(async (event): Promise<Need> => {
   const user = await requireAppUser(event);
   const petId = getRouterParam(event, 'petId');
@@ -28,11 +31,6 @@ export default defineEventHandler(async (event): Promise<Need> => {
     badRequest('Need is archived', 'errors.needArchived');
   }
 
-  const updatedRows = await db
-    .update(needs)
-    .set({ isActive: !need.isActive, updatedAt: instantToIso(Temporal.Now.instant()) })
-    .where(eq(needs.id, need.id))
-    .returning();
-
-  return toDomainNeed(updatedRows[0]!);
+  const toggled = await toggleNeedWithSchedule(db, need);
+  return toDomainNeed(toggled.need, toggled.recurrence);
 });

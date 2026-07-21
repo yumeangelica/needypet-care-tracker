@@ -4,6 +4,7 @@ import { Temporal } from '../../shared/utils/temporal';
 import {
   addCaretaker,
   api,
+  createDailyNeed,
   createNeed,
   createPet,
   createUser,
@@ -198,8 +199,9 @@ describe('daily digest endpoint', () => {
       const today = todayInTimeZone(eveningTz);
       const yesterday = addDaysDateOnly(today, -1);
       const pet = await createPet(owner.id, { lastRolledNeedDate: yesterday });
-      // An active, incomplete need on yesterday: rollover copies it to today.
-      await createNeed(pet.id, {
+      // An active daily rule with yesterday's instance: rollover materializes
+      // today's instance from the rule (ADR-0015).
+      await createDailyNeed(pet.id, {
         dateFor: yesterday,
         category: 'Evening walk',
         duration: { value: 30, unit: 'minutes' },

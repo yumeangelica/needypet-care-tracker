@@ -1,62 +1,73 @@
-import type { MeasurementShape, Need } from '../types/domain';
+import { MAX_NEEDS_PER_DAY } from '../schemas/need';
+import type { Need, RecurrenceRule } from '../types/domain';
 import { compareDateOnly } from './date';
-import { needTemplateKey } from './measurement';
+import { isScheduleDueOn } from './recurrence';
 
 /**
- * Pure daily-rollover computation. Given a pet's non-archived needs and the
+ * Pure rollover computation (ADR-0009, template model amended by ADR-0015).
+ * Given a pet's non-archived need instances, its recurrence rules and the
  * owner-local today:
- * - every open need left on a past day gets archived (paused ones included);
- * - each ACTIVE past need is a daily template that gets one fresh copy for
- *   today, de-duplicated by template key and skipped when today already has
- *   a live need with the same template;
+ * - every open instance left on a past day gets archived (paused ones
+ *   included) — past days stay frozen, one-off needs simply never return;
+ * - each ACTIVE schedule that is due today materializes one fresh instance,
+ *   de-duplicated by schedule id: skipped when today already has a live
+ *   instance of the same rule;
  * - missed in-between days are NOT backfilled: archived copies could never
- *   receive care records, so an empty past day is the honest history.
- *
- * The 10-per-day cap is not applied here: dedup bounds the copies at the
- * previous day's cap.
+ *   receive care records, so an empty past day is the honest history;
+ * - today never exceeds MAX_NEEDS_PER_DAY live instances: schedules are
+ *   considered oldest-first and excess due rules skip this day (they get
+ *   their next chance on their next due day).
  */
 
-export type RolloverNeed = Pick<
-  Need,
-  'id' | 'dateFor' | 'category' | 'description' | 'archived' | 'isActive'
-> &
-  MeasurementShape;
+export type RolloverNeed = Pick<Need, 'id' | 'dateFor' | 'scheduleId' | 'archived'>;
 
-export type RolloverTemplate = Pick<Need, 'category' | 'description'> & MeasurementShape;
+/** The slice of a schedule the planner needs (rule resolved from columns). */
+export interface RolloverSchedule {
+  id: string;
+  isActive: boolean;
+  recurrence: RecurrenceRule;
+  anchorDate: string; // YYYY-MM-DD, owner-local
+  createdAt: string; // deterministic oldest-first cap ordering
+}
 
 export interface RolloverPlan {
   archiveIds: string[];
-  createForToday: RolloverTemplate[];
+  /** Schedule ids to materialize an instance for on `today`. */
+  createForToday: string[];
 }
 
-export function computeRollover(needs: RolloverNeed[], today: string): RolloverPlan {
+export function computeRollover(
+  needs: RolloverNeed[],
+  schedules: RolloverSchedule[],
+  today: string,
+): RolloverPlan {
   const past = needs.filter(
     (need) => !need.archived && compareDateOnly(need.dateFor, today) < 0,
   );
 
-  const todayKeys = new Set(
-    needs
-      .filter((need) => need.dateFor === today && !need.archived && need.isActive)
-      .map(needTemplateKey),
+  const todayLive = needs.filter((need) => need.dateFor === today && !need.archived);
+  const todayScheduleIds = new Set(
+    todayLive.map((need) => need.scheduleId).filter((id): id is string => id !== null),
   );
 
-  const createForToday: RolloverTemplate[] = [];
-  const seenKeys = new Set<string>();
-  for (const need of past) {
-    if (!need.isActive) {
-      continue; // paused: stays on its day, does not roll forward
+  const createForToday: string[] = [];
+  let todayCount = todayLive.length;
+  const ordered = [...schedules].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  for (const schedule of ordered) {
+    if (!schedule.isActive) {
+      continue; // paused: no new instances until resumed
     }
-    const key = needTemplateKey(need);
-    if (seenKeys.has(key) || todayKeys.has(key)) {
+    if (!isScheduleDueOn(schedule, today)) {
       continue;
     }
-    seenKeys.add(key);
-    createForToday.push({
-      category: need.category,
-      description: need.description,
-      duration: need.duration ? { ...need.duration } : undefined,
-      quantity: need.quantity ? { ...need.quantity } : undefined,
-    });
+    if (todayScheduleIds.has(schedule.id)) {
+      continue; // today already has a live instance of this rule
+    }
+    if (todayCount >= MAX_NEEDS_PER_DAY) {
+      continue; // day is full — deterministic skip, oldest rules won
+    }
+    createForToday.push(schedule.id);
+    todayCount += 1;
   }
 
   return { archiveIds: past.map((need) => need.id), createForToday };

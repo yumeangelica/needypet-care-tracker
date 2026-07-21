@@ -41,8 +41,8 @@ SQLite: bun:sqlite (dev) / libSQL/Turso (prod, same dialect)
 | `server/routes/uploads/[...path].get.ts` | Serves local-disk pet photos (dev provider) |
 | `server/db/` | `schema.sqlite.ts` (the single schema), `index.ts` (`useDb`, `withTransaction`), `migrate.ts`, `migrations/sqlite/`, `seed.ts`, `import-legacy.ts` + `import/` |
 | `server/plugins/01.migrate.ts` | Dev-only auto-migrate on boot (production migrates at deploy time) |
-| `server/utils/` | `session`, `petAccess`, `validate`, `errors`, `rateLimit`, `tokens`, `password`, `mailer`, `rollover`, `careRecords`, `mappers`, `imageStorage` |
-| `shared/` (`#shared` alias) | Isomorphic code: `schemas/` (zod, client + server), `types/domain.ts` (DTOs), `utils/` (`temporal`, `date`, `datetime`, `measurement`, `careRules`, `rollover`, `records`, `stats`, `digest`, `petImages`, `imageValidation`) |
+| `server/utils/` | `session`, `petAccess`, `validate`, `errors`, `rateLimit`, `tokens`, `password`, `mailer`, `rollover`, `needSchedules`, `careRecords`, `mappers`, `imageStorage` |
+| `shared/` (`#shared` alias) | Isomorphic code: `schemas/` (zod, client + server), `types/domain.ts` (DTOs), `utils/` (`temporal`, `date`, `datetime`, `measurement`, `careRules`, `rollover`, `recurrence`, `records`, `stats`, `digest`, `petImages`, `imageValidation`) |
 | `tests/` | `unit/` (shared logic, schemas, i18n parity, guardrails) and `integration/` (HTTP against a built server) — see [`testing-strategy.md`](testing-strategy.md) |
 
 ## Request flow
@@ -69,8 +69,9 @@ Every authenticated API handler follows the same pipeline:
 
 Reading a pet additionally triggers the **lazy day rollover**
 (`server/utils/rollover.ts` → pure plan in `shared/utils/rollover.ts`): open
-needs from past days are archived and active ones are re-created for the
-owner's current day, guarded by `pets.lastRolledNeedDate`
+instances from past days are archived and each due active recurrence rule
+(`need_schedules`, [ADR-0015](decisions/0015-recurring-need-schedules.md))
+materializes today's instance, guarded by `pets.lastRolledNeedDate`
 ([ADR-0009](decisions/0009-lazy-rollover.md)).
 
 ## API surface
@@ -84,6 +85,8 @@ POST|DELETE /api/pets/[petId]/image
 POST /api/pets/[petId]/caretakers DELETE /api/pets/[petId]/caretakers/[userId]
 POST /api/pets/[petId]/needs      PUT|DELETE /api/pets/[petId]/needs/[needId]
 POST /api/pets/[petId]/needs/[needId]/toggle
+PUT|DELETE /api/pets/[petId]/schedules/[scheduleId]
+POST /api/pets/[petId]/schedules/[scheduleId]/toggle
 POST /api/pets/[petId]/needs/[needId]/records
 PATCH|DELETE /api/pets/[petId]/needs/[needId]/records/[recordId]
 POST /api/internal/daily-digest   (cron only, guarded by NUXT_DIGEST_SECRET)
@@ -185,5 +188,6 @@ checkable ones are enforced by `tests/unit/guardrails.spec.ts`.
 | vue-i18n as a plain plugin; en/fi key parity | [ADR-0007](decisions/0007-plain-vue-i18n.md) | `i18n.spec.ts` |
 | Date-only values are owner-local `YYYY-MM-DD` strings; record `date` is UTC ISO | [ADR-0008](decisions/0008-owner-timezone-care-day.md) | unit + integration tests |
 | Rollover is lazy, idempotent, never backfills | [ADR-0009](decisions/0009-lazy-rollover.md) | `rollover.spec.ts` (unit + integration) |
+| Need instances materialize from `need_schedules` rules; frozen history survives rule deletion (`SET NULL`) | [ADR-0015](decisions/0015-recurring-need-schedules.md) | `recurrence.spec.ts` + `rollover.spec.ts` |
 | Exactly one bounded measurement per need/record, matching types | [ADR-0014](decisions/0014-bounded-single-measurements.md) | zod + DB CHECK + tests |
 | API responses never cached by the service worker | Workbox denylist in `nuxt.config.ts` | config |

@@ -1,6 +1,6 @@
 # 0009 — Lazy on-read daily rollover, idempotent, no backfill
 
-**Status**: Accepted
+**Status**: Accepted — template model amended by [0015](0015-recurring-need-schedules.md) (schedules replace copy-forward as the source of today's copies; lazy/idempotent/no-backfill unchanged)
 
 ## Context
 

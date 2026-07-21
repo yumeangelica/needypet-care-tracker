@@ -8,10 +8,13 @@ the pure rule functions live in `shared/utils/`.
 
 ```
 users ──1:N──► pets ──1:N──► needs ──1:N──► care_records
-  │              ▲                              │
-  └──N:M────────┘ (pet_caretakers)              │
+  │              ▲             ▲                │
+  └──N:M────────┘              │                │
+     (pet_caretakers)          │                │
   └──◄─────────── care_records.care_taker_id ───┘ (SET NULL on user delete)
        pets ──1:N──► care_records (denormalized pet_id)
+       pets ──1:N──► need_schedules ──1:N──► needs.schedule_id
+                                             (SET NULL on rule delete)
 ```
 
 Schema conventions (any SQLite host behaves identically):
@@ -54,10 +57,22 @@ Pure join table with composite PK `(petId, userId)`, both cascading. This is
 the entire sharing model — a row means that user is a caretaker of that pet.
 Caretakers are added by username (they must already have an account).
 
+### `need_schedules`
+
+A recurrence rule ([ADR-0015](decisions/0015-recurring-need-schedules.md)):
+`petId` → pets (cascade), the template fields (`category`, `description`, one
+measurement with the same CHECKs as needs), `recurrenceType`
+(`daily | interval | weekly`), `intervalDays` (interval only, 2–365),
+`weekdays` (weekly only, CSV of ISO weekday numbers, `'1,4'` = Mon+Thu),
+`anchorDate` (owner-local date-only, the fixed interval rhythm zero),
+`isActive` (paused = false: no new instances until resumed).
+
 ### `needs`
 
-One care task on one care day: `petId` → pets (cascade), `dateFor`
-(owner-local `YYYY-MM-DD`), `category` (3–50 chars), `description` (≤1000),
+One care task **instance** on one care day: `petId` → pets (cascade),
+`scheduleId` → need_schedules (**SET NULL** on rule delete so frozen history
+survives; NULL = one-off or legacy history), `dateFor` (owner-local
+`YYYY-MM-DD`), `category` (3–50 chars), `description` (≤1000),
 one measurement (below), `completed`, `archived`, `isActive` (paused = false).
 
 DB CHECK constraints mirror the zod rules: exactly one measurement present;
@@ -105,7 +120,7 @@ without permission → 403.
 | Create / edit / delete pet | ✔ | ✘ |
 | Manage pet image | ✔ | ✘ |
 | Add / remove caretakers | ✔ | self-removal only |
-| Create / edit / delete / pause needs | ✔ | ✘ |
+| Create / edit / delete / pause needs (and their recurrence rules) | ✔ | ✘ |
 | Add care record (owner's **current** care day only) | ✔ | ✔ |
 | Edit / delete a care record | ✔ (any record) | own records only |
 | Anything on an archived (rolled-over) day | ✘ frozen | ✘ frozen |
@@ -117,7 +132,7 @@ Record-creation rejections run in the legacy backend's order
 `measurement-mismatch` — a **completed need does not block mutation**,
 because undoing an accidental "All Done!" is the point; completion is
 recomputed afterwards. A **paused need still accepts records** (legacy
-parity — pausing only stops tomorrow's rollover).
+parity — pausing only suspends future occurrences of the rule, ADR-0015).
 
 ## Dates and timezones
 
@@ -139,22 +154,52 @@ the seam utilities are `shared/utils/{date,datetime}.ts`.
   dependent. The existing `?? 'UTC'` fallbacks are dead paths anyway (a live
   pet always has an owner row, thanks to the cascade).
 
+## Recurrence rules (need schedules)
+
+A need instance (`needs` row, one per owner-local day) is materialized from a
+**recurrence rule** (`need_schedules` row) —
+[ADR-0015](decisions/0015-recurring-need-schedules.md):
+
+- Rule kinds: `daily`, `interval` (every N days, 2–365, **fixed anchor**:
+  due when `daysBetween(anchorDate, today) % N === 0`; missed days never
+  shift the rhythm), `weekly` (ISO weekday set). A create-time `once` choice
+  makes a schedule-less instance that archives at rollover and never returns.
+- The rule carries the template (category, description, one bounded
+  measurement); its instances denormalize those fields per day.
+- **Pause** flips `need_schedules.is_active`: no new instances until resumed,
+  the rule survives indefinitely. Today's live instance mirrors the state and
+  still accepts records. Resuming on a due day materializes today's instance
+  immediately (cap-checked).
+- Editing a scheduled instance edits the RULE and mirrors onto today's live
+  instance; a real rule change re-anchors `anchorDate` to the owner-local
+  today. Deleting a scheduled instance (or the rule from the rules list)
+  removes the rule and its live instances; **archived history rows survive**
+  with `schedule_id` set NULL by the FK.
+- The pet page shows the owner a rules list (active + paused) — the only
+  handle on a paused weekly/interval rule between its due days.
+- Existing data: migration `0005` created one `daily` rule per distinct live
+  template (grouped per pet by the seven identity columns) and pointed the
+  live instances at it, so pre-0015 pets behave identically.
+
 ## Daily rollover
 
-Lazy, on-read, owner-local ([ADR-0009](decisions/0009-lazy-rollover.md)).
+Lazy, on-read, owner-local ([ADR-0009](decisions/0009-lazy-rollover.md),
+template model amended by [ADR-0015](decisions/0015-recurring-need-schedules.md)).
 Pure plan in `shared/utils/rollover.ts` (`computeRollover`), applied
 transactionally by `server/utils/rollover.ts` (`rollPetNeedsIfDue`) from the
 pet GET endpoints:
 
-- every open (non-archived) need left on a past day is archived — paused ones
-  included;
-- each **active** past need acts as a daily template: one fresh copy is
-  created for today, de-duplicated by template key
-  (`needTemplateKey`) and skipped when today already has a live need with the
-  same template;
-- paused (`isActive: false`) needs stay on their day and do not roll forward;
+- every open (non-archived) instance left on a past day is archived — paused
+  ones and one-offs included;
+- each **active** schedule that is **due today** (`isScheduleDueOn`,
+  `shared/utils/recurrence.ts`) materializes one fresh instance, de-duplicated
+  by `schedule_id`: skipped when today already has a live instance of the
+  same rule;
+- paused schedules produce nothing; one-offs are never re-created;
 - missed in-between days are **not** backfilled — archived copies could never
-  receive records, so an empty past day is the honest history.
+  receive records, so an empty past day is the honest history;
+- today never exceeds `MAX_NEEDS_PER_DAY` live instances: schedules
+  materialize oldest-first and excess due rules skip to their next due day.
 
 Idempotency: `pets.lastRolledNeedDate` is compared with `>=` (not `===`, so a
 move to an earlier timezone that steps "today" backwards stays quiet), and the

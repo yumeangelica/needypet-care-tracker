@@ -106,3 +106,8 @@ export function diffDaysDateOnly(from: string, to: string): number {
     .until(Temporal.PlainDate.from(to), { largestUnit: 'day' })
     .days;
 }
+
+/** ISO weekday of a date-only value: 1 = Monday … 7 = Sunday. */
+export function isoWeekdayOf(value: string): number {
+  return Temporal.PlainDate.from(value).dayOfWeek;
+}
