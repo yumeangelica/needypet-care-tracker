@@ -1,15 +1,21 @@
 import { eq } from 'drizzle-orm';
 import { needUpdateSchema } from '#shared/schemas/need';
 import type { Need } from '#shared/types/domain';
-import { hasExactlyOneMeasurement } from '#shared/utils/measurement';
-import { instantToIso } from '#shared/utils/datetime';
-import { Temporal } from '#shared/utils/temporal';
 import { firstRow, useDb } from '../../../../db';
 import { needs } from '../../../../db/schema';
-import { toDomainNeed, toMeasurementColumns } from '../../../../utils/mappers';
+import { toDomainNeed } from '../../../../utils/mappers';
+import { updateNeedWithSchedule } from '../../../../utils/needSchedules';
 import { requirePetOwner } from '../../../../utils/petAccess';
 import { requireAppUser } from '../../../../utils/session';
 
+/**
+ * Edits a care task. A payload without a measurement keeps the existing one
+ * (legacy updateNeed behavior); completed/archived/isActive/dateFor are never
+ * editable here. On a scheduled instance the edit applies to the RULE and is
+ * mirrored onto this instance; `recurrence` reconciles the rule itself
+ * (omitted = keep, `once` = detach, a rule = update/create + re-anchor on
+ * change) — see server/utils/needSchedules.ts (ADR-0015).
+ */
 export default defineEventHandler(async (event): Promise<Need> => {
   const user = await requireAppUser(event);
   const petId = getRouterParam(event, 'petId');
@@ -29,28 +35,6 @@ export default defineEventHandler(async (event): Promise<Need> => {
     badRequest('Need is archived', 'errors.needArchived');
   }
 
-  // A payload without a measurement keeps the need's existing one
-  // (legacy updateNeed behavior). completed/archived/isActive/dateFor
-  // are never editable through this endpoint.
-  const measurement = hasExactlyOneMeasurement(input)
-    ? toMeasurementColumns(input)
-    : {
-        durationValue: need.durationValue,
-        durationUnit: need.durationUnit,
-        quantityValue: need.quantityValue,
-        quantityUnit: need.quantityUnit,
-      };
-
-  const updatedRows = await db
-    .update(needs)
-    .set({
-      category: input.category,
-      description: input.description,
-      ...measurement,
-      updatedAt: instantToIso(Temporal.Now.instant()),
-    })
-    .where(eq(needs.id, need.id))
-    .returning();
-
-  return toDomainNeed(updatedRows[0]!);
+  const updated = await updateNeedWithSchedule(db, need, input);
+  return toDomainNeed(updated.need, updated.recurrence);
 });

@@ -45,6 +45,9 @@ const measurementLabel = computed(() => {
   return '';
 });
 
+// "Every day" / "Every 2 days" / "Mon, Thu" — null (one-off) hides the badge.
+const recurrenceLabel = computed(() => formatRecurrenceLabel(props.need.recurrence, t));
+
 const unitLabel = computed(() =>
   props.need.duration ? 'min' : props.need.quantity?.unit ?? '',
 );
@@ -156,7 +159,10 @@ async function confirmRemoveRecord(): Promise<void> {
   <article class="need-card" :class="{ 'need-card-done': need.completed }">
     <div class="need-head">
       <h4 class="need-category">{{ need.category }}</h4>
-      <span class="need-measurement">{{ measurementLabel }}</span>
+      <span class="need-badges">
+        <span v-if="recurrenceLabel" class="need-recurrence">{{ recurrenceLabel }}</span>
+        <span class="need-measurement">{{ measurementLabel }}</span>
+      </span>
     </div>
 
     <p v-if="need.description" class="need-description">{{ need.description }}</p>
@@ -166,10 +172,11 @@ async function confirmRemoveRecord(): Promise<void> {
       {{ $t('needs.donePraise') }}
     </p>
     <!-- Archived copies are frozen history; the pause note only makes sense
-         on a live (non-archived) need. -->
+         on a live (non-archived) need. A scheduled task resumes on demand;
+         a one-off pause keeps the legacy "won't continue" meaning. -->
     <p v-else-if="!need.isActive && !need.archived" class="need-status need-status-paused">
       <CirclePause :size="16" aria-hidden="true" />
-      {{ $t('needs.pausedNote') }}
+      {{ need.recurrence ? $t('needs.pausedNote') : $t('needs.pausedNoteOnce') }}
     </p>
 
     <p v-if="!need.completed && loggedValue > 0" class="need-progress">
@@ -309,11 +316,27 @@ async function confirmRemoveRecord(): Promise<void> {
   color: var(--color-primary-foreground-strong);
 }
 
+.need-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
 .need-measurement {
   padding: 3px 12px;
   border-radius: var(--radius-pill);
   background: var(--color-surface-control);
   color: var(--color-primary-foreground-strong);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.need-recurrence {
+  padding: 3px 12px;
+  border: 1px solid var(--color-card-edge);
+  border-radius: var(--radius-pill);
+  background: var(--color-well);
+  color: var(--color-muted-foreground);
   font-size: 0.75rem;
   white-space: nowrap;
 }

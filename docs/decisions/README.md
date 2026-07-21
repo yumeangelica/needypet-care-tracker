@@ -26,3 +26,5 @@ Changing a decision means a new ADR that supersedes the old one (mark the old
 | [0012](0012-error-message-key-localization.md) | English API messages + i18n `messageKey` for localization |
 | [0013](0013-revocable-sealed-cookie-sessions.md) | Revocable sealed-cookie sessions via a per-user version |
 | [0014](0014-bounded-single-measurements.md) | Exactly one bounded measurement per need and care record |
+| [0015](0015-recurring-need-schedules.md) | Recurring needs via first-class schedules; instances stay per-day rows |
+| [0016](0016-ai-assistant-seam.md) | AI care assistant behind a provider seam, off by default (Proposed) |

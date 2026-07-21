@@ -325,6 +325,14 @@ async function confirmLeave(): Promise<void> {
           </button>
         </div>
         <p v-else-if="dayIsFull" class="tasks-full-note">{{ $t('needs.dayFull') }}</p>
+
+        <!-- Rules list: the only handle on a paused rule between its due days. -->
+        <ScheduleManager
+          v-if="pet.isOwner && pet.schedules"
+          :pet-id="pet.id"
+          :schedules="pet.schedules"
+          @changed="refresh()"
+        />
       </section>
 
       <section v-if="!pet.isOwner" class="leave-section" aria-labelledby="leave-title">
@@ -364,7 +372,13 @@ async function confirmLeave(): Promise<void> {
 
       <AppModal :open="removingNeed !== null" :title="$t('needs.removeCareTaskTitle')" @close="removingNeed = null">
         <p class="remove-note">
-          {{ $t('needs.removeCareTaskNote', { category: removingNeed?.category }) }}
+          <!-- A recurring task keeps its diary history; only the rule and
+               today's task go. A one-off takes its records with it. -->
+          {{
+            removingNeed?.recurrence
+              ? $t('needs.removeScheduleNote', { category: removingNeed?.category })
+              : $t('needs.removeCareTaskNote', { category: removingNeed?.category })
+          }}
         </p>
         <div class="remove-actions">
           <AppButton variant="secondary" :disabled="removeBusy" @click="removingNeed = null">

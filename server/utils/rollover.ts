@@ -4,13 +4,14 @@ import { instantToIso } from '#shared/utils/datetime';
 import { computeRollover } from '#shared/utils/rollover';
 import { Temporal } from '#shared/utils/temporal';
 import { firstRow, withTransaction } from '../db';
-import { needs, pets } from '../db/schema';
-import { toDomainNeed, toMeasurementColumns } from './mappers';
+import { needSchedules, needs, pets } from '../db/schema';
+import { toRecurrenceRule } from './mappers';
 import type { PetRow } from './petAccess';
 
 /**
- * Lazy on-read daily rollover, called from the pet GET endpoints. Rolls the
- * pet's needs forward to the owner's current day and stamps
+ * Lazy on-read rollover (ADR-0009, schedules per ADR-0015), called from the
+ * pet GET endpoints. Archives open past-day instances, materializes today's
+ * instances from the pet's due active schedules, and stamps
  * `pets.last_rolled_need_date` as the idempotency guard.
  *
  * Concurrency/idempotency:
@@ -41,10 +42,30 @@ export async function rollPetNeedsIfDue(pet: PetRow, ownerTimezone: string): Pro
     }
 
     const openRows = await tx
-      .select()
+      .select({
+        id: needs.id,
+        dateFor: needs.dateFor,
+        scheduleId: needs.scheduleId,
+        archived: needs.archived,
+      })
       .from(needs)
       .where(and(eq(needs.petId, pet.id), eq(needs.archived, false)));
-    const plan = computeRollover(openRows.map(toDomainNeed), today);
+    const scheduleRows = await tx
+      .select()
+      .from(needSchedules)
+      .where(eq(needSchedules.petId, pet.id));
+
+    const plan = computeRollover(
+      openRows,
+      scheduleRows.map((row) => ({
+        id: row.id,
+        isActive: row.isActive,
+        recurrence: toRecurrenceRule(row),
+        anchorDate: row.anchorDate,
+        createdAt: row.createdAt,
+      })),
+      today,
+    );
 
     const now = instantToIso(Temporal.Now.instant());
     if (plan.archiveIds.length > 0) {
@@ -53,14 +74,23 @@ export async function rollPetNeedsIfDue(pet: PetRow, ownerTimezone: string): Pro
         .set({ archived: true, isActive: false, updatedAt: now })
         .where(inArray(needs.id, plan.archiveIds));
     }
-    for (const template of plan.createForToday) {
+    const byId = new Map(scheduleRows.map((row) => [row.id, row]));
+    for (const scheduleId of plan.createForToday) {
+      const schedule = byId.get(scheduleId);
+      if (!schedule) {
+        continue; // planner only emits ids it was given
+      }
       await tx.insert(needs).values({
         id: crypto.randomUUID(),
         petId: pet.id,
+        scheduleId: schedule.id,
         dateFor: today,
-        category: template.category,
-        description: template.description,
-        ...toMeasurementColumns(template),
+        category: schedule.category,
+        description: schedule.description,
+        durationValue: schedule.durationValue,
+        durationUnit: schedule.durationUnit,
+        quantityValue: schedule.quantityValue,
+        quantityUnit: schedule.quantityUnit,
         createdAt: now,
         updatedAt: now,
       });

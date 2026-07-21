@@ -64,9 +64,35 @@ export interface Pet {
   updatedAt: string;
 }
 
+/**
+ * How a need schedule repeats (ADR-0015). Weekdays are ISO numbers,
+ * 1 = Monday … 7 = Sunday, sorted and unique.
+ */
+export type RecurrenceRule =
+  | { type: 'daily' }
+  | { type: 'interval'; intervalDays: number } // every N days from the anchor, 2..365
+  | { type: 'weekly'; weekdays: number[] };
+
+/** A recurrence rule: the template need instances are materialized from. */
+export interface NeedSchedule extends MeasurementShape {
+  id: string;
+  petId: string;
+  category: string;
+  description: string;
+  recurrence: RecurrenceRule;
+  anchorDate: string; // YYYY-MM-DD, owner-local; fixed interval rhythm zero
+  isActive: boolean; // false = paused: no new instances until resumed
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Need extends MeasurementShape {
   id: string;
   petId: string;
+  /** Source rule, or null for one-off needs and frozen history rows. */
+  scheduleId: string | null;
+  /** The source rule's recurrence, resolved for display; null when one-off. */
+  recurrence: RecurrenceRule | null;
   dateFor: string; // YYYY-MM-DD, owner-local care day
   category: string;
   description: string;
@@ -121,6 +147,8 @@ export interface PetDetail extends Pet {
   todayRecords: CareRecordWithActor[];
   /** Present only when the requesting user is the owner. */
   caretakers?: PetCaretaker[];
+  /** Recurrence rules (active + paused). Present only for the owner. */
+  schedules?: NeedSchedule[];
 }
 
 export interface PetCaretaker {

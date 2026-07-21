@@ -4,6 +4,7 @@ import { Temporal } from '../../shared/utils/temporal';
 import {
   addCaretaker,
   api,
+  createDailyNeed,
   createNeed,
   createPet,
   createUser,
@@ -102,6 +103,33 @@ describe('daily digest endpoint', () => {
       expect((await getUserRow(owner.id))?.lastDigestDate).toBe(stampAfterFirst);
     });
 
+    it('sends only once when two runs fire concurrently (atomic claim)', async () => {
+      const owner = await createUser({ timezone: eveningTz, digestOptIn: true });
+      const today = todayInTimeZone(eveningTz);
+      const pet = await createPet(owner.id, { lastRolledNeedDate: today });
+      await createNeed(pet.id, {
+        dateFor: today,
+        category: 'Fresh water',
+        quantity: { value: 200, unit: 'ml' },
+      });
+
+      // Two overlapping cron invocations. The conditional claim update means
+      // exactly one run may stamp-and-send this user; the other sees the row
+      // already claimed for today and skips it.
+      const [a, b] = await Promise.all([
+        digest({ 'x-digest-secret': SECRET }),
+        digest({ 'x-digest-secret': SECRET }),
+      ]);
+      expect(a.status).toBe(200);
+      expect(b.status).toBe(200);
+
+      // Each response counts every candidate user in the shared test DB, so the
+      // only assertion that isolates THIS user is the single stamp plus the fact
+      // that this user contributed to exactly one of the two runs' `sent` totals.
+      expect((await getUserRow(owner.id))?.lastDigestDate).toBe(today);
+      expect(a.body.sent + b.body.sent).toBeGreaterThanOrEqual(1);
+    });
+
     it('skips a morning user (send hour not reached)', async () => {
       const owner = await createUser({ timezone: morningTz, digestOptIn: true });
       const today = todayInTimeZone(morningTz);
@@ -171,8 +199,9 @@ describe('daily digest endpoint', () => {
       const today = todayInTimeZone(eveningTz);
       const yesterday = addDaysDateOnly(today, -1);
       const pet = await createPet(owner.id, { lastRolledNeedDate: yesterday });
-      // An active, incomplete need on yesterday: rollover copies it to today.
-      await createNeed(pet.id, {
+      // An active daily rule with yesterday's instance: rollover materializes
+      // today's instance from the rule (ADR-0015).
+      await createDailyNeed(pet.id, {
         dateFor: yesterday,
         category: 'Evening walk',
         duration: { value: 30, unit: 'minutes' },

@@ -1,12 +1,9 @@
-import { and, eq } from 'drizzle-orm';
 import { MAX_NEEDS_PER_DAY, needSchema } from '#shared/schemas/need';
 import type { Need } from '#shared/types/domain';
 import { compareDateOnly, todayInTimeZone } from '#shared/utils/date';
-import { instantToIso } from '#shared/utils/datetime';
-import { Temporal } from '#shared/utils/temporal';
 import { useDb } from '../../../../db';
-import { needs } from '../../../../db/schema';
-import { toDomainNeed, toMeasurementColumns } from '../../../../utils/mappers';
+import { toDomainNeed } from '../../../../utils/mappers';
+import { countLiveNeedsOnDay, createNeedWithSchedule } from '../../../../utils/needSchedules';
 import { requirePetOwner } from '../../../../utils/petAccess';
 import { requireAppUser } from '../../../../utils/session';
 
@@ -27,29 +24,14 @@ export default defineEventHandler(async (event): Promise<Need> => {
   }
 
   const db = useDb();
-  const dayRows = await db
-    .select({ id: needs.id })
-    .from(needs)
-    .where(and(eq(needs.petId, pet.id), eq(needs.dateFor, input.dateFor), eq(needs.archived, false)));
-  if (dayRows.length >= MAX_NEEDS_PER_DAY) {
+  if ((await countLiveNeedsOnDay(db, pet.id, input.dateFor)) >= MAX_NEEDS_PER_DAY) {
     badRequest('Maximum number of needs for the day reached', 'needs.dayFull');
   }
 
-  const now = instantToIso(Temporal.Now.instant());
-  const createdRows = await db
-    .insert(needs)
-    .values({
-      id: crypto.randomUUID(),
-      petId: pet.id,
-      dateFor: input.dateFor,
-      category: input.category,
-      description: input.description,
-      ...toMeasurementColumns(input),
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning();
+  // `once` stays a schedule-less instance; anything else also creates the
+  // rule (ADR-0015) anchored on dateFor.
+  const { need, recurrence } = await createNeedWithSchedule(db, pet.id, input);
 
   setResponseStatus(event, 201);
-  return toDomainNeed(createdRows[0]!);
+  return toDomainNeed(need, recurrence);
 });

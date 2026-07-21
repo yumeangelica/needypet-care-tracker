@@ -1,10 +1,11 @@
 import { eq } from 'drizzle-orm';
-import { canMutateRecord } from '#shared/utils/careRules';
+import { canMutateRecord, validateRecordMutation } from '#shared/utils/careRules';
 import { instantToIso } from '#shared/utils/datetime';
 import { Temporal } from '#shared/utils/temporal';
 import { firstRow, useDb, withTransaction } from '../../../../../../db';
 import { careRecords, needs } from '../../../../../../db/schema';
 import { recomputeNeedCompletion } from '../../../../../../utils/careRecords';
+import { toDomainCareRecord, toDomainNeed } from '../../../../../../utils/mappers';
 import { requirePetAccess } from '../../../../../../utils/petAccess';
 import { requireAppUser } from '../../../../../../utils/session';
 
@@ -37,7 +38,10 @@ export default defineEventHandler(async (event) => {
     forbidden();
   }
 
-  if (needRow.archived) {
+  // Same gate as PATCH: only an archived (frozen) day blocks the mutation.
+  // The record already matches its need, so passing its own shape keeps the
+  // measurement check a no-op and leaves 'archived' as the sole rejection.
+  if (validateRecordMutation(toDomainNeed(needRow), toDomainCareRecord(record, null)) === 'archived') {
     badRequest('Care history for rolled-over days is frozen', 'errors.dayFrozen');
   }
 
