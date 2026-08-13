@@ -37,7 +37,13 @@ export default defineEventHandler(async (event) => {
   // Cheap abuse guard; the real gate is the secret above.
   await checkRateLimit(event, `digest:ip:${rateLimitIp(event)}`, { max: 60, windowMs: 60_000 });
 
+  // A non-numeric NUXT_DIGEST_HOUR would make `localHour < NaN` false and open
+  // the send gate at every hour — refuse to run rather than mail off-schedule.
   const sendHour = Number(config.hour);
+  if (!Number.isInteger(sendHour) || sendHour < 0 || sendHour > 23) {
+    console.error(`[daily-digest] Invalid digest hour: ${config.hour}`);
+    throw createError({ statusCode: 500, statusMessage: 'Digest endpoint is misconfigured' });
+  }
   const db = useDb();
   const homeLink = `${publicOrigin(event)}/home`;
   const mailer = useMailer();
@@ -112,10 +118,12 @@ export default defineEventHandler(async (event) => {
       } catch (sendError) {
         // Release the claim so a later run retries: restore the prior stamp
         // (the value read before this run) rather than leaving today stamped.
+        // Guard on the claimed value so this can never clobber a fresher stamp
+        // written by a concurrent run for a later day.
         await db
           .update(users)
           .set({ lastDigestDate: user.lastDigestDate, updatedAt: instantToIso(Temporal.Now.instant()) })
-          .where(eq(users.id, user.id));
+          .where(and(eq(users.id, user.id), eq(users.lastDigestDate, localDate)));
         throw sendError;
       }
       sent += 1;
