@@ -6,9 +6,12 @@ import {
   createDailyNeed,
   createNeed,
   createPet,
+  createRecord,
   createSchedule,
   createUser,
   createUserWithSession,
+  errorMessage,
+  getNeedRow,
   getNeedRows,
   getPetRow,
   getScheduleRows,
@@ -320,6 +323,114 @@ describe('lazy rollover', () => {
         method: 'DELETE',
         cookie: owner.cookie,
       });
+      expect(res.status).toBe(204);
+
+      expect(await getScheduleRows(pet.id)).toHaveLength(0);
+      const rows = await getNeedRows(pet.id);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]!.archived).toBe(true);
+      expect(rows[0]!.scheduleId).toBeNull(); // FK SET NULL kept the history row
+    });
+
+    it('rules-list edit propagates to today instance, re-anchors and recomputes completion', async () => {
+      const pet = await createPet(owner.id, { lastRolledNeedDate: today });
+      const rule = await createSchedule(pet.id, {
+        anchorDate: addDaysDateOnly(today, -3),
+        category: 'Daily water',
+        quantity: { value: 100, unit: 'ml' },
+      });
+      const instance = await createNeed(pet.id, {
+        dateFor: today,
+        category: 'Daily water',
+        quantity: { value: 100, unit: 'ml' },
+        completed: true,
+        scheduleId: rule.id,
+      });
+      await createRecord({ needId: instance.id, petId: pet.id, careTakerId: owner.id, quantity: { value: 100, unit: 'ml' } });
+
+      const updated = await api(`/api/pets/${pet.id}/schedules/${rule.id}`, {
+        method: 'PUT',
+        cookie: owner.cookie,
+        body: {
+          category: 'Daily water',
+          quantity: { value: 250, unit: 'ml' },
+          recurrence: { type: 'interval', intervalDays: 2 },
+        },
+      });
+      expect(updated.status).toBe(200);
+      expect(updated.body.recurrence).toEqual({ type: 'interval', intervalDays: 2 });
+
+      const schedules = await getScheduleRows(pet.id);
+      expect(schedules[0]!.anchorDate).toBe(today); // rule change re-anchors
+      const instanceRow = await getNeedRow(instance.id);
+      expect(instanceRow?.quantityValue).toBe(250); // fields propagated
+      // 100 ml logged now falls short of the 250 target: the instance reopens.
+      expect(instanceRow?.completed).toBe(false);
+    });
+
+    it('rules-list edit rejects switching the measurement type', async () => {
+      const pet = await createPet(owner.id, { lastRolledNeedDate: today });
+      const rule = await createSchedule(pet.id, {
+        anchorDate: today,
+        category: 'Daily water',
+        quantity: { value: 100, unit: 'ml' },
+      });
+      const res = await api(`/api/pets/${pet.id}/schedules/${rule.id}`, {
+        method: 'PUT',
+        cookie: owner.cookie,
+        body: { category: 'Daily water', duration: { value: 20, unit: 'minutes' } },
+      });
+      expect(res.status).toBe(400);
+      expect(errorMessage(res.body)).toBe('Measurement type is fixed after creation');
+    });
+
+    it('rules-list edit materializes today instance when due, capped at the day limit', async () => {
+      const openPet = await createPet(owner.id, { lastRolledNeedDate: today });
+      const openRule = await createSchedule(openPet.id, {
+        anchorDate: today,
+        category: 'Daily water',
+        quantity: { value: 100, unit: 'ml' },
+      });
+      const materialized = await api(`/api/pets/${openPet.id}/schedules/${openRule.id}`, {
+        method: 'PUT',
+        cookie: owner.cookie,
+        body: { category: 'Renamed water', quantity: { value: 120, unit: 'ml' } },
+      });
+      expect(materialized.status).toBe(200);
+      const openRows = await getNeedRows(openPet.id);
+      expect(openRows.filter((row) => row.dateFor === today && !row.archived && row.scheduleId === openRule.id)).toHaveLength(1);
+
+      const fullPet = await createPet(owner.id, { lastRolledNeedDate: today });
+      for (let i = 0; i < 10; i += 1) {
+        await createNeed(fullPet.id, { dateFor: today, category: `Filler ${i}`, duration: { value: 5, unit: 'minutes' } });
+      }
+      const fullRule = await createSchedule(fullPet.id, {
+        anchorDate: today,
+        category: 'Daily water',
+        quantity: { value: 100, unit: 'ml' },
+      });
+      const rejected = await api(`/api/pets/${fullPet.id}/schedules/${fullRule.id}`, {
+        method: 'PUT',
+        cookie: owner.cookie,
+        body: { category: 'Daily water', quantity: { value: 100, unit: 'ml' } },
+      });
+      expect(rejected.status).toBe(400);
+      expect(errorMessage(rejected.body)).toBe('Maximum number of needs for the day reached');
+    });
+
+    it('rules-list delete removes the rule and live instances but keeps frozen history', async () => {
+      const pet = await createPet(owner.id, { lastRolledNeedDate: today });
+      const rule = await createSchedule(pet.id, { anchorDate: today, category: 'Daily play' });
+      await createNeed(pet.id, { dateFor: today, category: 'Daily play', scheduleId: rule.id });
+      await createNeed(pet.id, {
+        dateFor: addDaysDateOnly(today, -1),
+        category: 'Daily play',
+        archived: true,
+        isActive: false,
+        scheduleId: rule.id,
+      });
+
+      const res = await api(`/api/pets/${pet.id}/schedules/${rule.id}`, { method: 'DELETE', cookie: owner.cookie });
       expect(res.status).toBe(204);
 
       expect(await getScheduleRows(pet.id)).toHaveLength(0);

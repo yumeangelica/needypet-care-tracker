@@ -355,6 +355,7 @@ export default {
     imageTooLarge: 'Kuva on liian suuri',
     needArchived: 'Hoitotehtävä on arkistoitu',
     needCompleted: 'Hoitotehtävä on jo hoidettu',
+    needMeasurementTypeFixed: 'Mittaustapaa ei voi vaihtaa hoitotehtävän luonnin jälkeen',
     measurementMismatch: 'Merkinnän pitää käyttää samaa mittaustapaa kuin hoitotehtävän',
     recordNotToday: 'Hoitoa voi kirjata vain kuluvalle hoitopäivälle',
     careInFuture: 'Hoitoa ei voi kirjata tulevaisuuteen',
