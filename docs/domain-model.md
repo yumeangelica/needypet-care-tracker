@@ -81,7 +81,10 @@ DB CHECK constraints mirror the zod rules: exactly one measurement present;
 At most **10 non-archived needs per pet per day** (`MAX_NEEDS_PER_DAY` in
 `shared/schemas/need.ts`, shared by API and UI). On update, `dateFor` is
 immutable and the measurement may be omitted (the server carries over the
-existing one) — but sending both types is rejected.
+existing one) — but sending both types is rejected, and so is switching the
+measurement **type** after creation (`errors.needMeasurementTypeFixed`): the
+need's records must keep matching it. The UI hides the type toggle on edit;
+the server enforces it for both the need and the rule endpoint.
 
 ### `care_records`
 
@@ -104,7 +107,12 @@ Every need and every care record has **exactly one** measurement
 A record must match its parent need's measurement type
 (`measurementTypesMatch`, `shared/utils/measurement.ts`). Records may be
 partial (e.g. 20 of 60 minutes); completion is computed from the sum of a
-need's records (`shared/utils/records.ts`). Enforced at three layers: zod
+need's records (`shared/utils/records.ts`). Because completion is derived,
+editing a target value resyncs it (`recomputeNeedCompletion`,
+`server/utils/careRecords.ts`): raising the target above the logged sum
+reopens the need — and with it the record gate — and lowering it back under
+the sum completes it again. Rule edits resync every live instance they
+propagate to. Enforced at three layers: zod
 `superRefine` (client + server), DB CHECK constraints, and the shared rule
 functions.
 
