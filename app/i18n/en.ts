@@ -356,6 +356,7 @@ export default {
     imageTooLarge: 'Image is too large',
     needArchived: 'This care task is archived',
     needCompleted: 'This care task is already completed',
+    needMeasurementTypeFixed: 'The measurement type cannot be changed after the care task is created',
     measurementMismatch: 'The entry must use the same measurement as the care task',
     recordNotToday: 'Care can only be logged for the current care day',
     careInFuture: 'Care cannot be logged in the future',

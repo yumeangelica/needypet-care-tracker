@@ -622,7 +622,7 @@ async function confirmDelete(): Promise<void> {
   align-items: center;
   gap: 0.35rem;
   align-self: flex-start;
-  min-height: 36px;
+  min-height: var(--tap-target-size);
   padding: 0.25rem 0.75rem;
   border: 1px solid var(--color-card-edge);
   border-radius: var(--radius-pill);

@@ -3,11 +3,12 @@ import { MAX_NEEDS_PER_DAY } from '#shared/schemas/need';
 import type { NeedInput, NeedUpdateInput, ScheduleUpdateInput } from '#shared/schemas/need';
 import type { RecurrenceRule } from '#shared/types/domain';
 import { instantToIso } from '#shared/utils/datetime';
-import { hasExactlyOneMeasurement } from '#shared/utils/measurement';
+import { getMeasurementType, hasExactlyOneMeasurement } from '#shared/utils/measurement';
 import { formatWeekdaysCsv, isScheduleDueOn } from '#shared/utils/recurrence';
 import { Temporal } from '#shared/utils/temporal';
 import { type Db, firstRow, withTransaction } from '../db';
 import { needSchedules, needs } from '../db/schema';
+import { recomputeNeedCompletion } from './careRecords';
 import type { NeedRow, ScheduleRow } from './mappers';
 import { toMeasurementColumns, toRecurrenceColumns, toRecurrenceRule } from './mappers';
 
@@ -51,6 +52,17 @@ function rejectDayFull(): never {
   badRequest('Maximum number of needs for the day reached', 'needs.dayFull');
 }
 
+/** The measurement type ('duration' | 'quantity') a stored row carries. */
+function carryOverType(carryOver: MeasurementColumns): 'duration' | 'quantity' | null {
+  if (carryOver.durationValue !== null) {
+    return 'duration';
+  }
+  if (carryOver.quantityValue !== null) {
+    return 'quantity';
+  }
+  return null;
+}
+
 /** Rule equality: same type and parameters (weekday order-insensitive). */
 export function rulesEqual(a: RecurrenceRule, b: RecurrenceRule): boolean {
   if (a.type !== b.type) {
@@ -65,12 +77,24 @@ export function rulesEqual(a: RecurrenceRule, b: RecurrenceRule): boolean {
   return true; // both daily
 }
 
-/** Payload measurement, or the given carry-over columns when omitted. */
+/**
+ * Payload measurement, or the given carry-over columns when omitted. The
+ * measurement TYPE is fixed at creation (a care record must always match its
+ * need's type), so a payload that would switch duration <-> quantity is
+ * rejected — the UI hides the type toggle on edit, this closes the API hole.
+ */
 function resolveMeasurement(
   input: { duration?: { value: number; unit: 'minutes' } | null; quantity?: { value: number; unit: 'ml' | 'g' } | null },
   carryOver: MeasurementColumns,
 ): MeasurementColumns {
-  return hasExactlyOneMeasurement(input) ? toMeasurementColumns(input) : carryOver;
+  if (!hasExactlyOneMeasurement(input)) {
+    return carryOver;
+  }
+  const currentType = carryOverType(carryOver);
+  if (currentType !== null && getMeasurementType(input) !== currentType) {
+    badRequest('Measurement type is fixed after creation', 'errors.needMeasurementTypeFixed');
+  }
+  return toMeasurementColumns(input);
 }
 
 /** Inserts the per-day instance row for a schedule. */
@@ -230,7 +254,11 @@ export async function updateNeedWithSchedule(
       .set({ ...fields, updatedAt: now })
       .where(eq(needs.id, need.id))
       .returning();
-    return { need: updatedRows[0]!, recurrence };
+    // A changed target value can cross the completion threshold either way
+    // (raising it un-completes, lowering it can complete) — resync from the
+    // existing records so the card and the record gate stay honest.
+    const synced = await recomputeNeedCompletion(tx, updatedRows[0]!, now);
+    return { need: synced, recurrence };
   });
 }
 
@@ -328,27 +356,23 @@ export async function updateSchedule(
       .returning();
     const updated = updatedRows[0]!;
 
-    const todayLive = await tx
-      .select({ id: needs.id })
-      .from(needs)
+    const propagated = await tx
+      .update(needs)
+      .set({ ...fields, updatedAt: now })
       .where(
         and(
           eq(needs.scheduleId, schedule.id),
           eq(needs.dateFor, ownerToday),
           eq(needs.archived, false),
         ),
-      );
-    if (todayLive.length > 0) {
-      await tx
-        .update(needs)
-        .set({ ...fields, updatedAt: now })
-        .where(
-          and(
-            eq(needs.scheduleId, schedule.id),
-            eq(needs.dateFor, ownerToday),
-            eq(needs.archived, false),
-          ),
-        );
+      )
+      .returning();
+    if (propagated.length > 0) {
+      // A changed target value can cross the completion threshold either way,
+      // so resync each live instance from its existing records.
+      for (const row of propagated) {
+        await recomputeNeedCompletion(tx, row, now);
+      }
     } else if (
       updated.isActive &&
       isScheduleDueOn({ recurrence: newRule, anchorDate }, ownerToday)

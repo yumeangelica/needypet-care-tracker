@@ -141,7 +141,7 @@ const caredPets = computed(() => allPets.value.filter((pet) => !pet.isOwner));
   transition: var(--transition-interactive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .pet-card:hover {
     box-shadow: var(--shadow-control-hover);
     transform: translateY(-5px);

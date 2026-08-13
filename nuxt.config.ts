@@ -1,5 +1,18 @@
 import tailwindcss from '@tailwindcss/vite';
+import browserslist from 'browserslist';
+import { browserslistToTargets } from 'lightningcss';
 import type { RollupLog, WarningHandlerWithDefault } from 'rollup';
+
+const resolvedBrowserVersions = browserslist();
+const cssTargets = browserslistToTargets(resolvedBrowserVersions);
+
+if (Object.keys(cssTargets).length === 0) {
+  throw new Error('Browserslist resolved no targets for Lightning CSS');
+}
+
+// Vite build targets use engine equivalents for the explicit mobile entries in
+// package.json: Android Chromium/Samsung follow Chrome, while iOS follows WebKit.
+const browserBuildTargets = ['chrome111', 'edge111', 'firefox121', 'safari16.4', 'ios16.4'];
 
 const ignoredSourcemapWarningPlugins = new Set([
   '@tailwindcss/vite:generate:build',
@@ -74,6 +87,19 @@ export default defineNuxtConfig({
     },
   },
   vite: {
+    css: {
+      transformer: 'lightningcss',
+      lightningcss: {
+        targets: cssTargets,
+      },
+    },
+    $client: {
+      build: {
+        target: browserBuildTargets,
+        cssTarget: browserBuildTargets,
+        cssMinify: 'lightningcss',
+      },
+    },
     plugins: [tailwindcss()],
     optimizeDeps: {
       include: [

@@ -372,10 +372,11 @@ async function confirmLeave(): Promise<void> {
 
       <AppModal :open="removingNeed !== null" :title="$t('needs.removeCareTaskTitle')" @close="removingNeed = null">
         <p class="remove-note">
-          <!-- A recurring task keeps its diary history; only the rule and
-               today's task go. A one-off takes its records with it. -->
+          <!-- A live recurring task keeps its diary history; only the rule and
+               today's task go. A one-off — or an archived history row, whose
+               rule already moved on — takes just that row with it. -->
           {{
-            removingNeed?.recurrence
+            removingNeed?.recurrence && !removingNeed.archived
               ? $t('needs.removeScheduleNote', { category: removingNeed?.category })
               : $t('needs.removeCareTaskNote', { category: removingNeed?.category })
           }}
@@ -409,7 +410,7 @@ async function confirmLeave(): Promise<void> {
   transition: var(--transition-interactive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .pet-edit-link:hover {
     background: rgba(255, 255, 255, 0.7);
     box-shadow: var(--shadow-control-hover);
@@ -483,7 +484,7 @@ async function confirmLeave(): Promise<void> {
   transition: var(--transition-interactive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .diary-link:hover {
     box-shadow: var(--shadow-control-hover);
     transform: translateY(-1px);

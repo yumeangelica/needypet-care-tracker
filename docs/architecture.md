@@ -30,7 +30,7 @@ SQLite: bun:sqlite (dev) / libSQL/Turso (prod, same dialect)
 
 | Path | Responsibility |
 | --- | --- |
-| `nuxt.config.ts` | Modules (nuxt-auth-utils, @vite-pwa/nuxt), PWA manifest + Workbox, runtimeConfig (db/mailer/uploads/digest/session), `useI18n` auto-import preset, Nitro `bun` preset, `/offline` prerender |
+| `nuxt.config.ts` | Modules (nuxt-auth-utils, @vite-pwa/nuxt), PWA manifest + Workbox, runtimeConfig (db/mailer/uploads/digest/session), `useI18n` auto-import preset, Nitro `bun` preset, `/offline` prerender, Lightning CSS targets (below) |
 | `app/pages/` | File-based routes: landing, auth flows, `home`, `profile`, `pets/new`, `pets/[petId]/{index,edit,history,stats}`, `offline` |
 | `app/components/` | 16 flat components (`AppButton`, `AppModal`, `NeedCard`, `NeedForm`, `CareRecordForm`, `CareRecordList`, `CaretakerManager`, `PetForm`, `PetImagePicker`, `DayNavigator`, `TaskProgressBadge`, …) |
 | `app/middleware/auth.ts` | Route guard for signed-in pages |
@@ -162,6 +162,31 @@ Temporal is internal to computation: storage, JSON DTOs and zod schemas stay
 shared code. The full date contract (owner-local care day, UTC record
 timestamps) is in [`domain-model.md`](domain-model.md#dates-and-timezones)
 and [ADR-0008](decisions/0008-owner-timezone-care-day.md).
+
+## CSS build targets
+
+The supported-browser matrix lives in one place: the `browserslist` field in
+`package.json` (Chrome/Edge 111+, Firefox 121+, Safari/iOS 16.4+, plus the
+Android Chromium, Android Firefox and Samsung Internet equivalents). Chosen so
+modern CSS the app already uses — nesting, `:has()`, container queries — is
+native everywhere it ships.
+
+`nuxt.config.ts` feeds that matrix to Lightning CSS (`browserslistToTargets`) as
+the Vite CSS transformer and minifier, and mirrors it in the client
+`build.target` / `cssTarget` using engine equivalents (Android Chromium and
+Samsung follow Chrome, iOS follows WebKit). The config throws at load if
+browserslist resolves no targets, so a broken matrix fails the build instead of
+silently shipping untranspiled CSS.
+
+Touch-related CSS rules follow from the same matrix: hover styles sit behind
+`@media (hover: hover) and (pointer: fine)` so they never stick after a tap on
+a touch device, and interactive controls are sized from `--tap-target-size`
+(44px) rather than per-component literals.
+
+One caveat that belongs with the build: `package.json` pins `overrides.vite`.
+Nuxt needs Vite 8 (rolldown) while Vitest also accepts 7, and without the
+override Bun hoists 7 for the unit run, where Nuxt's rolldown plugins crash it
+(`Missing field 'moduleType'`). Bump the pin alongside Nuxt; don't drop it.
 
 ## PWA
 

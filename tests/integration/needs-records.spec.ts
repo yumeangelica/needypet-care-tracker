@@ -128,6 +128,67 @@ describe('needs and care records', () => {
     });
   });
 
+  describe('editing a need recomputes completion', () => {
+    let needId: string;
+    const records = () => `/api/pets/${pet.id}/needs/${needId}/records`;
+
+    it('reopens a completed need when the target is raised above the logged sum', async () => {
+      const created = await api(`/api/pets/${pet.id}/needs`, {
+        method: 'POST',
+        body: { dateFor: today, category: 'Morning walk', duration: { value: 30, unit: 'minutes' } },
+        cookie: owner.cookie,
+      });
+      expect(created.status).toBe(201);
+      needId = created.body.id;
+
+      const logged = await api(records(), {
+        method: 'POST',
+        body: { timezone: TZ, duration: { value: 30, unit: 'minutes' } },
+        cookie: owner.cookie,
+      });
+      expect(logged.body.completed).toBe(true);
+
+      const raised = await api(`/api/pets/${pet.id}/needs/${needId}`, {
+        method: 'PUT',
+        body: { category: 'Morning walk', duration: { value: 60, unit: 'minutes' } },
+        cookie: owner.cookie,
+      });
+      expect(raised.status).toBe(200);
+      expect(raised.body.completed).toBe(false);
+
+      // The completion gate reopened: a further record is accepted, not
+      // rejected as 'already completed' (the regression this guards).
+      const more = await api(records(), {
+        method: 'POST',
+        body: { timezone: TZ, duration: { value: 15, unit: 'minutes' } },
+        cookie: owner.cookie,
+      });
+      expect(more.status).toBe(201);
+      expect(more.body.completed).toBe(false);
+    });
+
+    it('re-completes when the target drops back below the logged sum', async () => {
+      // 45 min logged so far (30 + 15); drop the target under that.
+      const lowered = await api(`/api/pets/${pet.id}/needs/${needId}`, {
+        method: 'PUT',
+        body: { category: 'Morning walk', duration: { value: 20, unit: 'minutes' } },
+        cookie: owner.cookie,
+      });
+      expect(lowered.status).toBe(200);
+      expect(lowered.body.completed).toBe(true);
+    });
+
+    it('rejects switching the measurement type after creation', async () => {
+      const res = await api(`/api/pets/${pet.id}/needs/${needId}`, {
+        method: 'PUT',
+        body: { category: 'Morning walk', quantity: { value: 100, unit: 'ml' } },
+        cookie: owner.cookie,
+      });
+      expect(res.status).toBe(400);
+      expect(errorMessage(res.body)).toBe('Measurement type is fixed after creation');
+    });
+  });
+
   describe('measurement rules', () => {
     let quantityNeed: { id: string };
     let recordId: string;

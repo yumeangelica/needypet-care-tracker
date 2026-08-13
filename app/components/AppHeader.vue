@@ -34,6 +34,7 @@ import { PawPrint } from '@lucide/vue';
   align-items: center;
   gap: 8px;
   width: auto;
+  min-height: var(--tap-target-size);
   margin: 0;
 }
 
@@ -60,7 +61,7 @@ import { PawPrint } from '@lucide/vue';
   transition: var(--transition-interactive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .header-link:hover {
     background: var(--color-pill-cream-soft);
   }

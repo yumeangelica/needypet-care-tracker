@@ -12,6 +12,11 @@ Bun-native and Web-standard throughout: `bun:sqlite` drives the database,
 Web Crypto powers tokens and R2 request signing, and the test suite runs under
 `bun --bun vitest` — no `node:crypto`, no Node runtime required.
 
+Supported browsers: Chrome/Edge 111+, Firefox 121+, Safari and iOS 16.4+, plus
+the Android and Samsung Internet equivalents. The matrix lives in the
+`browserslist` field of `package.json` and drives the Lightning CSS build
+targets (`docs/architecture.md`).
+
 ## Features
 
 - Cookie-session auth (nuxt-auth-utils) with email confirmation, revocable
@@ -111,7 +116,8 @@ interpolation are handled by vue-i18n (e.g. task counts, care-team announcements
   the acting user's IANA timezone stored for audit.
 - Every need and care record has exactly one measurement: duration
   (1–1440 minutes) or quantity (1–100,000 ml/g). A record must match its parent
-  need's measurement type.
+  need's measurement type, so that type is fixed once the need is created.
+  Completion is derived from the records, so editing a target recomputes it.
 - Owners control everything; caretakers see only their assigned pets and can
   view, log, and edit/delete only their own records. Rolled-over (archived)
   days are frozen.

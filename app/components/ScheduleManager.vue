@@ -275,7 +275,7 @@ async function confirmRemove(): Promise<void> {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  min-height: 36px;
+  min-height: var(--tap-target-size);
   padding: 0.25rem 0.75rem;
   border: 1px solid var(--color-card-edge);
   border-radius: var(--radius-pill);
@@ -286,7 +286,7 @@ async function confirmRemove(): Promise<void> {
   transition: var(--transition-interactive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .need-action-button:hover {
     box-shadow: var(--shadow-control-hover);
     transform: translateY(-1px);

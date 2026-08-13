@@ -47,7 +47,7 @@ NUXT_DB_URL=libsql://<db>-<org>.turso.io NUXT_DB_AUTH_TOKEN=<token> bun run db:m
 | `NUXT_UPLOADS_R2_BUCKET` | R2 bucket name for pet photos |
 | `NUXT_UPLOADS_R2_PUBLIC_BASE_URL` | public read base, e.g. `https://pub-<hash>.r2.dev` or a custom domain |
 | `NUXT_DIGEST_SECRET` | shared secret guarding the digest cron endpoint; **empty = endpoint disabled (always 401)** |
-| `NUXT_DIGEST_HOUR` | local hour (0–23) each user must reach before that day's digest sends (default `18`) |
+| `NUXT_DIGEST_HOUR` | local hour (0–23) each user must reach before that day's digest sends (default `18`); a value outside that range makes the endpoint fail with 500 rather than mail off-schedule |
 
 ## Public origin and proxy trust
 
