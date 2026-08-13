@@ -409,7 +409,7 @@ async function confirmLeave(): Promise<void> {
   transition: var(--transition-interactive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .pet-edit-link:hover {
     background: rgba(255, 255, 255, 0.7);
     box-shadow: var(--shadow-control-hover);
@@ -483,7 +483,7 @@ async function confirmLeave(): Promise<void> {
   transition: var(--transition-interactive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .diary-link:hover {
     box-shadow: var(--shadow-control-hover);
     transform: translateY(-1px);

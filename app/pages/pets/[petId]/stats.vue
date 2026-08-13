@@ -240,7 +240,7 @@ function formatTotal(total: number): string {
   box-shadow: none;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .week-nav-button:not(:disabled):hover {
     box-shadow: var(--shadow-control-hover);
     transform: translateY(-2px);

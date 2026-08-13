@@ -117,8 +117,8 @@ function onBackdropClick(event: MouseEvent): void {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: var(--tap-target-size);
+  height: var(--tap-target-size);
   border: none;
   border-radius: var(--radius-pill);
   background: transparent;
@@ -126,7 +126,7 @@ function onBackdropClick(event: MouseEvent): void {
   transition: var(--transition-interactive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .app-modal-close:hover {
     background: var(--color-surface-control);
   }

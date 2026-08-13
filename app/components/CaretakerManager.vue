@@ -203,7 +203,7 @@ async function confirmRemove(): Promise<void> {
 
 .care-team-remove {
   flex-shrink: 0;
-  min-height: 36px;
+  min-height: var(--tap-target-size);
   padding: 0.25rem 0.8rem;
   border: 1px solid var(--color-danger-border);
   border-radius: var(--radius-pill);

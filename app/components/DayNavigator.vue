@@ -82,7 +82,7 @@ function changeDay(days: number): void {
   transition: var(--transition-interactive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .day-nav-button:hover {
     box-shadow: var(--shadow-control-hover);
     transform: translateY(-2px);
@@ -108,7 +108,7 @@ function changeDay(days: number): void {
   min-width: 0;
   /* Reserve room for the Today pill so the row keeps one height whether or
      not the pill is shown — otherwise the buttons bob vertically. */
-  min-height: 3.4rem;
+  min-height: calc(var(--tap-target-size) + 1.3rem);
 }
 
 .day-nav-date {
@@ -124,7 +124,7 @@ function changeDay(days: number): void {
 }
 
 .day-nav-today {
-  min-height: 28px;
+  min-height: var(--tap-target-size);
   padding: 2px 12px;
   border: none;
   border-radius: var(--radius-pill);

@@ -660,7 +660,7 @@ li {
   transition: var(--transition-interactive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .auth-secondary-link:hover {
     background: var(--color-surface-control-hover);
   }
@@ -767,7 +767,7 @@ li {
   transition: var(--transition-interactive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .show-password-button:hover {
     background: var(--color-surface-control);
     border-color: var(--color-border-hover);
@@ -800,7 +800,7 @@ li {
   transition: var(--transition-interactive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .action-button:hover {
     border-color: var(--color-border-hover);
     box-shadow: var(--shadow-control-hover);
@@ -817,7 +817,7 @@ li {
   background: var(--gradient-button-primary);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .primary-action-button:hover {
     background: var(--gradient-button-primary-hover);
   }
@@ -917,7 +917,7 @@ li {
 }
 
 /* Hover affordance; focus rules below win while a field is focused. */
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .form-field:hover,
   .form-field-input:hover {
     border-color: var(--color-border-hover);
@@ -1081,7 +1081,7 @@ span.form-field-input {
   transition: var(--transition-interactive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .custom-button:hover {
     border-color: var(--color-border-hover);
     box-shadow: var(--shadow-control-hover);
@@ -1135,7 +1135,7 @@ span.form-field-input {
   transition: var(--transition-interactive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .form-button:hover {
     border-color: var(--color-border-hover);
     box-shadow: var(--shadow-control-hover);
@@ -1166,7 +1166,7 @@ span.form-field-input {
   border-color: var(--color-border-soft);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .form-button.primary:hover {
     background: var(--gradient-button-primary-hover);
   }
@@ -1182,7 +1182,7 @@ span.form-field-input {
   color: var(--color-destructive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .form-button.danger:hover {
     background: var(--color-danger-hover);
   }
@@ -1205,7 +1205,7 @@ span.form-field-input {
   transition: var(--transition-interactive);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .settings-button:hover {
     background: var(--color-auth-button-secondary);
     border-color: var(--color-border-hover);
